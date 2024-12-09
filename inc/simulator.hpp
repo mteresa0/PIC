@@ -8,9 +8,11 @@
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/fe/mapping_q.h>
 #include <deal.II/particles/particle_handler.h>
+#include <deal.II/particles/particle_iterator.h>
 #include <deal.II/base/point.h>
 
 #include <fstream>
+#include <random>
 
 namespace PICsimulator{
     
@@ -66,13 +68,36 @@ void PICsimulator::Simulator<dim>::make_grid() {
 template<int dim>
 void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
-    std::vector<Point<dim>> positions(10, {0.9,0.9});
+    int N = 10;
 
+    Point<dim> initial_pos_vector({0.5, 0.5});
+    
+    if(dim!=2)
+        std::cerr << "non si può fare ora";
+    
+    std::vector<Point<dim>> positions(N, initial_pos_vector);
 
     particle_handler.insert_particles(positions);
 
-    std::cout << "particle inserted!\n" << particle_handler.n_global_particles() << "\n";
-}
+    // set velocities
+    std::random_device rd;
+    std::mt19937 gen(rd()); 
+    std::uniform_real_distribution<> velocity_distribution(-2., 2.);
+
+    {
+        Point<dim> velocity;
+        for(auto it = particle_handler.begin(); it!= particle_handler.end(); ++it){
+            for(int d = 0; d<dim; ++d){
+                velocity[d] = velocity_distribution(gen);
+                std::cout << velocity[d] << std::endl;
+            }
+            it->set_properties(velocity);
+        }
+    }
+
+    std::cout << "particles inserted!\n" << particle_handler.n_global_particles() << "\n";
+};
+
 
 
 #endif // SIMULATOR
