@@ -30,9 +30,16 @@ namespace PICsimulator{
         void make_grid();
         void insert_particles_dummy();
 
+        void boundary_wall(
+            const typename Particles::ParticleIterator<dim>         &particle,
+            const typename Triangulation<dim>::active_cell_iterator &cell);
+
         dealii::Triangulation<dim>              triangulation;
         const dealii::MappingQ<dim>             mapping;
         dealii::Particles::ParticleHandler<dim> particle_handler;
+
+        double dt = 0.1;
+        double T = 2;
 
     };
 
@@ -41,26 +48,47 @@ namespace PICsimulator{
 template<int dim>
 PICsimulator::Simulator<dim>::Simulator() :
 mapping(1), 
-particle_handler(triangulation, mapping, dim) {};
+particle_handler(triangulation, mapping, dim) 
+{
+        particle_handler.signals.particle_lost.connect(
+      [this](const typename Particles::ParticleIterator<dim>         &particle,
+             const typename Triangulation<dim>::active_cell_iterator &cell) {
+        this->boundary_wall(particle, cell);
+      });
+};
 
 
 template<int dim>
 void PICsimulator::Simulator<dim>::run() {
     make_grid();
     insert_particles_dummy();
+
+    unsigned int NT = T/dt;
+
+    for(unsigned int i = 0; i<NT; ++i){
+        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
+        {
+            Point<dim> position(it->get_location());
+            const Tensor<1, dim> velocity(it->get_properties());
+            
+            // update position
+            it->set_location(position + dt*velocity);
+
+            std::cout <<"t = " << i*dt <<" ) position         velocity\n";
+            for (auto d = 0; d<dim; ++d){
+                std::cout << "   "<< position[d] << "       " << velocity[d] << std::endl;
+            }
+            std::cout << std::endl;
+        }
+        particle_handler.sort_particles_into_subdomains_and_cells();
+    }
 }
 
 template<int dim>
 void PICsimulator::Simulator<dim>::make_grid() {
 
-
     dealii::GridGenerator::hyper_cube(triangulation);
     triangulation.refine_global(4);
-
-    // std::ofstream out("grid.svg");
-    // dealii::GridOut     gridout;
-    // gridout.write_vtk(triangulation, out);
-    // std::cout << "grid written in vtk" << std::endl;
 
     std::cout << "Grid created" << std::endl;
 };
@@ -68,7 +96,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
 template<int dim>
 void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
-    int N = 10;
+    int N = 1;
 
     Point<dim> initial_pos_vector({0.5, 0.5});
     
@@ -89,7 +117,6 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
         for(auto it = particle_handler.begin(); it!= particle_handler.end(); ++it){
             for(int d = 0; d<dim; ++d){
                 velocity[d] = velocity_distribution(gen);
-                std::cout << velocity[d] << std::endl;
             }
             it->set_properties(velocity);
         }
@@ -98,6 +125,31 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     std::cout << "particles inserted!\n" << particle_handler.n_global_particles() << "\n";
 };
 
+
+
+template <int dim>
+void PICsimulator::Simulator<dim>::boundary_wall( 
+    const typename Particles::ParticleIterator<dim>         &particle,
+    const typename Triangulation<dim>::active_cell_iterator &cell) 
+{
+    Point<dim> location(particle->get_location());
+    Tensor<1, dim> velocity(particle->get_properties());
+
+    for (int i = 0; i<dim; ++i){
+        if (location[i]<0){
+            velocity[i] = -velocity[i];
+            location[i] = -location[i];
+            std::cout << "particle has been lost (<0)\n";
+        } else if (location[i]>1){
+            velocity[i] = -velocity[i];
+            location[i] = 1-location[i];
+            std::cout << "particle has been lost (>1)\n";
+        }
+    }
+    // add new particle
+    
+
+}
 
 
 #endif // SIMULATOR
