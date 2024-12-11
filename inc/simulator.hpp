@@ -29,6 +29,7 @@ namespace PICsimulator{
 
         void make_grid();
         void insert_particles_dummy();
+        double compute_particle_kinetic_energy(const Tensor<1, dim> & vel);
 
         void boundary_wall(
             const typename Particles::ParticleIterator<dim>         &particle,
@@ -39,7 +40,8 @@ namespace PICsimulator{
         dealii::Particles::ParticleHandler<dim> particle_handler;
 
         double dt = 0.1;
-        double T = 2;
+        double T = 10;
+        double particle_mass = 1;
 
     };
 
@@ -64,8 +66,15 @@ void PICsimulator::Simulator<dim>::run() {
     insert_particles_dummy();
 
     unsigned int NT = T/dt;
+    std::cout << NT << std::endl;
+
+    std::vector<double> total_kinetic_energy(NT, 0);
+    std::vector<double> sum_particles_kinetic_energy(NT, 0);
+     
 
     for(unsigned int i = 0; i<NT; ++i){
+        int j = 0;
+        Tensor<1, dim> sum_vels;
         for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
             Point<dim> position(it->get_location());
@@ -74,14 +83,45 @@ void PICsimulator::Simulator<dim>::run() {
             // update position
             it->set_location(position + dt*velocity);
 
-            std::cout <<"t = " << i*dt <<" ) position         velocity\n";
-            for (auto d = 0; d<dim; ++d){
-                std::cout << "   "<< position[d] << "       " << velocity[d] << std::endl;
-            }
-            std::cout << std::endl;
+            // std::cout <<"t = " << i*dt <<" ) position         velocity           # particles = "<< particle_handler.n_global_particles()<< "\n";
+            // for (auto d = 0; d<dim; ++d){
+            //     std::cout << "   "<< position[d] << "       " << velocity[d] << std::endl;
+            // }
+            // std::cout << std::endl;
+            
+            // save kinetic energy per particle
+            double ke = particle_mass * velocity.norm();
+            sum_particles_kinetic_energy[i] += ke;
+            sum_vels += velocity;
+
+            ++j;
         }
+        total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
         particle_handler.sort_particles_into_subdomains_and_cells();
     }
+
+    // print kinetic energies
+    std::cout  << "kin energy of the system\n";
+    for (unsigned int t = 0; t<NT; ++t)
+    {
+        std::cout << total_kinetic_energy[t] << "   ";
+    }
+    std::cout << std::endl;
+
+    std::cout  << "sum of the particles kin energy\n";
+    for (unsigned int t = 0; t<NT; ++t)
+    {
+        std::cout << sum_particles_kinetic_energy[t] << "   ";
+    }
+    std::cout << std::endl;
+
+    
+}
+
+template<int dim>
+double PICsimulator::Simulator<dim>::compute_particle_kinetic_energy(const dealii::Tensor<1, dim> & vel)
+{
+    return particle_mass * vel.norm();
 }
 
 template<int dim>
@@ -96,7 +136,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
 template<int dim>
 void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
-    int N = 1;
+    int N = 100;
 
     Point<dim> initial_pos_vector;
 
@@ -111,7 +151,7 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     // set velocities
     std::random_device rd;
     std::mt19937 gen(rd()); 
-    std::uniform_real_distribution<> velocity_distribution(-2., 2.);
+    std::uniform_real_distribution<> velocity_distribution(-0.5, 0.5);
 
     {
         Point<dim> velocity;
@@ -141,11 +181,11 @@ void PICsimulator::Simulator<dim>::boundary_wall(
         if (location[i]<0){
             new_velocity[i] = -velocity[i];
             location[i] = -location[i];
-            std::cout << "particle has been lost (<0)\n";
+            // std::cout << "particle has been lost (<0)\n";
         } else if (location[i]>1){
             new_velocity[i] = -velocity[i];
             location[i] = 2-location[i];
-            std::cout << "particle has been lost (>1)\n";
+            // std::cout << "particle has been lost (>1)\n";
         } else {
             new_velocity[i] = velocity[i];
         }
