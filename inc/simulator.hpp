@@ -134,20 +134,30 @@ void PICsimulator::Simulator<dim>::boundary_wall(
 {
     Point<dim> location(particle->get_location());
     Tensor<1, dim> velocity(particle->get_properties());
+    std::vector<double> new_velocity(dim);
 
     for (int i = 0; i<dim; ++i){
         if (location[i]<0){
-            velocity[i] = -velocity[i];
+            new_velocity[i] = -velocity[i];
             location[i] = -location[i];
             std::cout << "particle has been lost (<0)\n";
         } else if (location[i]>1){
-            velocity[i] = -velocity[i];
-            location[i] = 1-location[i];
+            new_velocity[i] = -velocity[i];
+            location[i] = 2-location[i];
             std::cout << "particle has been lost (>1)\n";
+        } else {
+            new_velocity[i] = velocity[i];
         }
     }
+
     // add new particle
-    
+    Particles::Particle new_particle(location, particle->get_reference_location(), particle->get_id());
+
+    particle_handler.insert_particle(location,
+    particle->get_reference_location(),
+    particle->get_id(),
+    cell,
+    new_velocity);    
 
 }
 
