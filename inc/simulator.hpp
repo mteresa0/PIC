@@ -98,10 +98,11 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
     int N = 1;
 
-    Point<dim> initial_pos_vector({0.5, 0.5});
-    
-    if(dim!=2)
-        std::cerr << "non si può fare ora";
+    Point<dim> initial_pos_vector;
+
+    for(int n = 0; n<dim; ++n){
+        initial_pos_vector[n] = 0.5;
+    }
     
     std::vector<Point<dim>> positions(N, initial_pos_vector);
 
