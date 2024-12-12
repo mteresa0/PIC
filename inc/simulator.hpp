@@ -10,6 +10,7 @@
 #include <deal.II/particles/particle_handler.h>
 #include <deal.II/particles/particle_iterator.h>
 #include <deal.II/base/point.h>
+#include <deal.II/particles/data_out.h>
 
 #include <fstream>
 #include <random>
@@ -24,12 +25,15 @@ namespace PICsimulator{
         Simulator();
 
         void run();
+        
     
     private:
 
         void make_grid();
         void insert_particles_dummy();
         double compute_particle_kinetic_energy(const Tensor<1, dim> & vel);
+
+        void print_data(const int &);
 
         void boundary_wall(
             const typename Particles::ParticleIterator<dim>         &particle,
@@ -39,7 +43,7 @@ namespace PICsimulator{
         const dealii::MappingQ<dim>             mapping;
         dealii::Particles::ParticleHandler<dim> particle_handler;
 
-        double dt = 0.1;
+        double dt = 0.005;
         double T = 10;
         double particle_mass = 1;
 
@@ -98,22 +102,23 @@ void PICsimulator::Simulator<dim>::run() {
         }
         total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
         particle_handler.sort_particles_into_subdomains_and_cells();
+        print_data(i);
     }
 
     // print kinetic energies
-    std::cout  << "kin energy of the system\n";
-    for (unsigned int t = 0; t<NT; ++t)
-    {
-        std::cout << total_kinetic_energy[t] << "   ";
-    }
-    std::cout << std::endl;
+    // std::cout  << "kin energy of the system\n";
+    // for (unsigned int t = 0; t<NT; ++t)
+    // {
+    //     std::cout << total_kinetic_energy[t] << "   ";
+    // }
+    // std::cout << std::endl;
 
-    std::cout  << "sum of the particles kin energy\n";
-    for (unsigned int t = 0; t<NT; ++t)
-    {
-        std::cout << sum_particles_kinetic_energy[t] << "   ";
-    }
-    std::cout << std::endl;
+    // std::cout  << "sum of the particles kin energy\n";
+    // for (unsigned int t = 0; t<NT; ++t)
+    // {
+    //     std::cout << sum_particles_kinetic_energy[t] << "   ";
+    // }
+    // std::cout << std::endl;
 
     
 }
@@ -136,7 +141,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
 template<int dim>
 void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
-    int N = 100;
+    int N = 5;
 
     Point<dim> initial_pos_vector;
 
@@ -200,6 +205,31 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     cell,
     new_velocity);    
 
+}
+
+template<int dim>
+void PICsimulator::Simulator<dim>::print_data(const int  & i){
+
+    Particles::DataOut<dim> particle_out;
+    
+    particle_out.build_patches( 
+        particle_handler,
+        std::vector<std::string>(dim, "velocity"),
+        std::vector<DataComponentInterpretation::DataComponentInterpretation>(
+            dim, 
+            DataComponentInterpretation::component_is_part_of_vector));
+
+    DataOutBase::VtkFlags output_flags;
+    output_flags.time                       = dt*i;
+    output_flags.cycle                      = i;
+    output_flags.physical_units["velocity"] = "m/s";
+
+    particle_out.set_flags(output_flags);
+
+    std::ofstream output("outputs/particles-" +
+                        Utilities::int_to_string(i, 5) +
+                        ".vtu");
+    particle_out.write_vtu(output);
 }
 
 
