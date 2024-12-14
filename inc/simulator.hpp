@@ -9,19 +9,28 @@
 #include <deal.II/fe/mapping_q.h>
 #include <deal.II/particles/particle_handler.h>
 #include <deal.II/particles/particle_iterator.h>
+#include <deal.II/particles/particle_accessor.h>
 #include <deal.II/base/point.h>
 #include <deal.II/particles/data_out.h>
 
 #include <fstream>
 #include <random>
+#include <type_traits>
 
 namespace PICsimulator{
+
+    const double BOLTZMANN_K = 1.380649e-23; // J/K
+    const double TEMPERATURE = 10000;     // K
+    const double ELECTR_MASS = 1.9093837e-31; // kg
     
     using namespace dealii;
 
     template<int dim>
     class Simulator{
+        static_assert(dim==2||dim==3, "The dimension must must 2 or 3.");
+
     public:
+
         Simulator();
 
         void run();
@@ -31,7 +40,7 @@ namespace PICsimulator{
 
         void make_grid();
         void insert_particles_dummy();
-        double compute_particle_kinetic_energy(const Tensor<1, dim> & vel);
+        void set_initial_velocity();
 
         void print_data(const int &);
 
@@ -43,9 +52,14 @@ namespace PICsimulator{
         const dealii::MappingQ<dim>             mapping;
         dealii::Particles::ParticleHandler<dim> particle_handler;
 
-        double dt = 0.005;
-        double T = 10;
-        double particle_mass = 1;
+        // random generators for maxwell distribution of velocity
+        std::random_device rd;
+        std::mt19937 gen; 
+        std::normal_distribution<double> normal_distr;
+
+        double dt = 1e-8;
+        double T = 1e-5;
+        double particle_mass = ELECTR_MASS;
 
     };
 
@@ -54,13 +68,16 @@ namespace PICsimulator{
 template<int dim>
 PICsimulator::Simulator<dim>::Simulator() :
 mapping(1), 
-particle_handler(triangulation, mapping, dim) 
+particle_handler(triangulation, mapping, dim), 
+gen(rd()),
+normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
 {
-        particle_handler.signals.particle_lost.connect(
-      [this](const typename Particles::ParticleIterator<dim>         &particle,
-             const typename Triangulation<dim>::active_cell_iterator &cell) {
+    particle_handler.signals.particle_lost.connect(
+    [this]( const typename Particles::ParticleIterator<dim>         &particle,
+            const typename Triangulation<dim>::active_cell_iterator &cell) {
         this->boundary_wall(particle, cell);
-      });
+        }
+    );
 };
 
 
@@ -124,9 +141,17 @@ void PICsimulator::Simulator<dim>::run() {
 }
 
 template<int dim>
-double PICsimulator::Simulator<dim>::compute_particle_kinetic_energy(const dealii::Tensor<1, dim> & vel)
+void PICsimulator::Simulator<dim>::set_initial_velocity()
 {
-    return particle_mass * vel.norm();
+    Tensor<1, dim> initial_velocity;
+    for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
+        for(int d = 0; d<dim; ++d){
+            initial_velocity[d] = normal_distr(gen);
+        }
+        it->set_properties(initial_velocity);
+    }
+
+    return;
 }
 
 template<int dim>
@@ -136,6 +161,12 @@ void PICsimulator::Simulator<dim>::make_grid() {
     triangulation.refine_global(4);
 
     std::cout << "Grid created" << std::endl;
+
+    std::ofstream out("outputs/grid.vtk");
+    dealii::GridOut     gridout;
+    gridout.write_vtk(triangulation, out);
+    std::cout << "grid written in vtk" << std::endl;
+
 };
 
 template<int dim>
@@ -154,19 +185,7 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     particle_handler.insert_particles(positions);
 
     // set velocities
-    std::random_device rd;
-    std::mt19937 gen(rd()); 
-    std::uniform_real_distribution<> velocity_distribution(-0.5, 0.5);
-
-    {
-        Point<dim> velocity;
-        for(auto it = particle_handler.begin(); it!= particle_handler.end(); ++it){
-            for(int d = 0; d<dim; ++d){
-                velocity[d] = velocity_distribution(gen);
-            }
-            it->set_properties(velocity);
-        }
-    }
+    set_initial_velocity();
 
     std::cout << "particles inserted!\n" << particle_handler.n_global_particles() << "\n";
 };
@@ -182,14 +201,17 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     Tensor<1, dim> velocity(particle->get_properties());
     std::vector<double> new_velocity(dim);
 
+    double upper_boundary = 1;
+    double lower_boundary = 0;
+
     for (int i = 0; i<dim; ++i){
-        if (location[i]<0){
-            new_velocity[i] = -velocity[i];
+        if (location[i]<lower_boundary){
+            new_velocity[i] = 2*lower_boundary-velocity[i];
             location[i] = -location[i];
             // std::cout << "particle has been lost (<0)\n";
-        } else if (location[i]>1){
+        } else if (location[i]>upper_boundary){
             new_velocity[i] = -velocity[i];
-            location[i] = 2-location[i];
+            location[i] = 2*upper_boundary-location[i];
             // std::cout << "particle has been lost (>1)\n";
         } else {
             new_velocity[i] = velocity[i];
