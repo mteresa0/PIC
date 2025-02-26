@@ -2,12 +2,21 @@
 #  CMake script for the dummy program:
 ##
 
+# Declare the CMake minimum version required
+cmake_minimum_required(VERSION 3.13.4)
+cmake_policy(SET CMP0003 NEW) # setting improved behaviour of cmake
+
 # Find the deal.II package
 find_package(deal.II 9.5.0 REQUIRED
   HINTS ${DEAL_II_DIR} $ENV{DEAL_II_DIR})
 
 # Set the name of the project and target:
 set(TARGET "main")
+
+# Set outputs to clean
+set(CLEAN_UP_FILES
+  outputs/*.vtk outputs/*.vtu
+)
 
 # Include 'include' directories
 INCLUDE_DIRECTORIES(
@@ -16,9 +25,6 @@ INCLUDE_DIRECTORIES(
 
 # Include all .cc files in the src directory
 file(GLOB_RECURSE TARGET_SRC src/*.cc src/*.cpp)
-
-# Declare the CMake minimum version required
-cmake_minimum_required(VERSION 3.13.4)
 
 # Initialize deal.II variables
 deal_ii_initialize_cached_variables()
