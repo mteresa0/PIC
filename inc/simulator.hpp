@@ -65,6 +65,8 @@ namespace PICsimulator{
 
 };
 
+/// @brief constructor
+/// @tparam dim 
 template<int dim>
 PICsimulator::Simulator<dim>::Simulator() :
 mapping(1), 
@@ -81,6 +83,8 @@ normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
 };
 
 
+/// @brief run simulation
+/// @tparam dim 
 template<int dim>
 void PICsimulator::Simulator<dim>::run() {
     make_grid();
