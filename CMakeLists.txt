@@ -4,7 +4,7 @@
 
 # Find the deal.II package
 find_package(deal.II 9.5.0 REQUIRED
-  HINTS ${DEAL_II_DIR} ../ ../../ $ENV{DEAL_II_DIR})
+  HINTS ${DEAL_II_DIR} $ENV{DEAL_II_DIR})
 
 # Set the name of the project and target:
 set(TARGET "main")

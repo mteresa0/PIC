@@ -1,7 +1,6 @@
 #ifndef SIMULATOR
 #define SIMULATOR
 
-
 #include <deal.II/grid/tria.h>
 #include <deal.II/grid/grid_refinement.h>
 #include <deal.II/grid/grid_generator.h>
@@ -29,12 +28,13 @@ namespace PICsimulator{
     class Simulator{
         static_assert(dim==2||dim==3, "The dimension must must 2 or 3.");
 
+        using velocity_type = Tensor<1, dim>;
+
     public:
 
         Simulator();
 
-        void run();
-        
+        void run();        
     
     private:
 
@@ -42,7 +42,7 @@ namespace PICsimulator{
         void insert_particles_dummy();
         void set_initial_velocity();
 
-        void print_data(const int &);
+        void print_data_to_files(const int &);
 
         void boundary_wall(
             const typename Particles::ParticleIterator<dim>         &particle,
@@ -95,7 +95,7 @@ void PICsimulator::Simulator<dim>::run() {
 
     for(unsigned int i = 0; i<NT; ++i){
         int j = 0;
-        Tensor<1, dim> sum_vels;
+        velocity_type sum_vels;
         for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
             Point<dim> position(it->get_location());
@@ -119,27 +119,12 @@ void PICsimulator::Simulator<dim>::run() {
         }
         total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
         particle_handler.sort_particles_into_subdomains_and_cells();
-        print_data(i);
+        print_data_to_files(i);
     }
-
-    // print kinetic energies
-    // std::cout  << "kin energy of the system\n";
-    // for (unsigned int t = 0; t<NT; ++t)
-    // {
-    //     std::cout << total_kinetic_energy[t] << "   ";
-    // }
-    // std::cout << std::endl;
-
-    // std::cout  << "sum of the particles kin energy\n";
-    // for (unsigned int t = 0; t<NT; ++t)
-    // {
-    //     std::cout << sum_particles_kinetic_energy[t] << "   ";
-    // }
-    // std::cout << std::endl;
-
-    
 }
 
+/// @brief set the initial velocity of each particle in the particle handler according to maxwell-boltzmann distribution (see documentation)
+/// @tparam dim 
 template<int dim>
 void PICsimulator::Simulator<dim>::set_initial_velocity()
 {
@@ -154,6 +139,8 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
     return;
 }
 
+/// @brief creates the mesh
+/// @tparam dim 
 template<int dim>
 void PICsimulator::Simulator<dim>::make_grid() {
 
@@ -169,6 +156,8 @@ void PICsimulator::Simulator<dim>::make_grid() {
 
 };
 
+/// @brief dummy function that creates particles (it will be replaced)
+/// @tparam dim 
 template<int dim>
 void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
@@ -192,6 +181,11 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
 
 
 
+/// @brief called by the particle lost signal.
+/// @brief Instead of losing the particle when exiting the domain, the new position is computed and a new particle is inserted
+/// @tparam dim 
+/// @param particle 
+/// @param cell 
 template <int dim>
 void PICsimulator::Simulator<dim>::boundary_wall( 
     const typename Particles::ParticleIterator<dim>         &particle,
@@ -229,8 +223,11 @@ void PICsimulator::Simulator<dim>::boundary_wall(
 
 }
 
+/// @brief prints at a given timestep i the properties of each particle
+/// @tparam dim 
+/// @param i 
 template<int dim>
-void PICsimulator::Simulator<dim>::print_data(const int  & i){
+void PICsimulator::Simulator<dim>::print_data_to_files(const int  & i){
 
     Particles::DataOut<dim> particle_out;
     
