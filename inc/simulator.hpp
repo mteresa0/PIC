@@ -104,7 +104,6 @@ void PICsimulator::Simulator<dim>::run() {
      
 
     for(unsigned int i = 0; i<NT; ++i){
-        int j = 0;
         velocity_type sum_vels;
         for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
@@ -114,21 +113,21 @@ void PICsimulator::Simulator<dim>::run() {
             // update position
             it->set_location(position + dt*velocity);
 
-            // std::cout <<"t = " << i*dt <<" ) position         velocity           # particles = "<< particle_handler.n_global_particles()<< "\n";
-            // for (auto d = 0; d<dim; ++d){
-            //     std::cout << "   "<< position[d] << "       " << velocity[d] << std::endl;
-            // }
-            // std::cout << std::endl;
+            // update velocity
+            // set_velocity(it, velocity);
             
             // save kinetic energy per particle
             double ke = particle_mass * velocity.norm();
             sum_particles_kinetic_energy[i] += ke;
             sum_vels += velocity;
 
-            ++j;
         }
         total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
+
+        // sort particles into cells
         particle_handler.sort_particles_into_subdomains_and_cells();
+
+        // print data to files
         print_data_to_files(i);
     }
 };
@@ -199,7 +198,7 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     const typename Triangulation<dim>::active_cell_iterator &cell) 
 {
     Point<dim> location(particle->get_location());
-    Tensor<1, dim> velocity(particle->get_properties());
+    Tensor<1, dim> velocity(get_velocity(particle));
     std::vector<double> new_velocity(dim);
 
     double upper_boundary = 1;
@@ -230,6 +229,10 @@ void PICsimulator::Simulator<dim>::boundary_wall(
 
 }
 
+/// @brief set the velocity of a particle
+/// @tparam dim 
+/// @param particle 
+/// @param velocity 
 template <int dim>
 void PICsimulator::Simulator<dim>::set_velocity(typename Particles::ParticleIterator<dim> &particle, const velocity_type &velocity)
 {
@@ -237,6 +240,10 @@ void PICsimulator::Simulator<dim>::set_velocity(typename Particles::ParticleIter
     return;
 }
 
+/// @brief get the velocity of a particle
+/// @tparam dim 
+/// @param particle 
+/// @return 
 template <int dim>
 typename PICsimulator::Simulator<dim>::velocity_type PICsimulator::Simulator<dim>::get_velocity(const typename Particles::ParticleIterator<dim> &particle)
 {
