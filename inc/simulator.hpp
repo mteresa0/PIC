@@ -46,6 +46,10 @@ namespace PICsimulator{
             const typename Particles::ParticleIterator<dim>         &particle,
             const typename Triangulation<dim>::active_cell_iterator &cell);
 
+        // setter and getter for velocity
+        void set_velocity(typename Particles::ParticleIterator<dim> &particle, const velocity_type &velocity);
+        velocity_type get_velocity(const typename Particles::ParticleIterator<dim> &particle);
+
         // print data to files
         void print_data_to_files(const int &);
 
@@ -105,7 +109,7 @@ void PICsimulator::Simulator<dim>::run() {
         for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
             Point<dim> position(it->get_location());
-            const Tensor<1, dim> velocity(it->get_properties());
+            const Tensor<1, dim> velocity(get_velocity(it));
             
             // update position
             it->set_location(position + dt*velocity);
@@ -179,7 +183,7 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
         for(int d = 0; d<dim; ++d){
             initial_velocity[d] = normal_distr(gen);
         }
-        it->set_properties(initial_velocity);
+        set_velocity(it, initial_velocity);
     }
     return;
 };
@@ -224,6 +228,19 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     cell,
     new_velocity);    
 
+}
+
+template <int dim>
+void PICsimulator::Simulator<dim>::set_velocity(typename Particles::ParticleIterator<dim> &particle, const velocity_type &velocity)
+{
+    particle->set_properties(velocity);
+    return;
+}
+
+template <int dim>
+typename PICsimulator::Simulator<dim>::velocity_type PICsimulator::Simulator<dim>::get_velocity(const typename Particles::ParticleIterator<dim> &particle)
+{
+    return velocity_type(particle->get_properties());
 }
 
 /// @brief prints at a given timestep i the properties of each particle
