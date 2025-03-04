@@ -15,7 +15,7 @@ set(TARGET "main")
 
 # Set outputs to clean
 set(CLEAN_UP_FILES
-  outputs/*.vtk outputs/*.vtu
+  outputs/*.vtk outputs/*.vtu outputs/*.csv
 )
 
 # Include 'include' directories

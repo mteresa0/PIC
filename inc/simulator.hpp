@@ -130,6 +130,13 @@ void PICsimulator::Simulator<dim>::run() {
         // print data to files
         print_data_to_files(i);
     }
+
+    // print kinetic energies into csv
+    std::ofstream output("outputs/total_kinetic_energy.csv");
+    output << "time, total_kinetic_energy, sum_particles_kinetic_energy\n";
+    for (unsigned int i = 0; i<NT; ++i){
+        output << i*dt << "," << total_kinetic_energy[i] << "," << sum_particles_kinetic_energy[i] << "\n";
+    }
 };
 
 /// @brief creates the mesh
