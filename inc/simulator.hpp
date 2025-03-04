@@ -18,8 +18,8 @@
 
 namespace PICsimulator{
 
-    const double BOLTZMANN_K = 1.380649e-23; // J/K
-    const double TEMPERATURE = 10000;     // K
+    const double BOLTZMANN_K = 1.380649e-23;  // J/K
+    const double TEMPERATURE = 10000;         // K
     const double ELECTR_MASS = 1.9093837e-31; // kg
     
     using namespace dealii;
@@ -42,12 +42,14 @@ namespace PICsimulator{
         void insert_particles_dummy();
         void set_initial_velocity();
 
-        void print_data_to_files(const int &);
-
         void boundary_wall(
             const typename Particles::ParticleIterator<dim>         &particle,
             const typename Triangulation<dim>::active_cell_iterator &cell);
 
+        // print data to files
+        void print_data_to_files(const int &);
+
+        // dealii objects
         dealii::Triangulation<dim>              triangulation;
         const dealii::MappingQ<dim>             mapping;
         dealii::Particles::ParticleHandler<dim> particle_handler;
@@ -57,6 +59,7 @@ namespace PICsimulator{
         std::mt19937 gen; 
         std::normal_distribution<double> normal_distr;
 
+        // simulation parameters
         double dt = 1e-8;
         double T = 1e-5;
         double particle_mass = ELECTR_MASS;
@@ -81,7 +84,6 @@ normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
         }
     );
 };
-
 
 /// @brief run simulation
 /// @tparam dim 
@@ -125,23 +127,7 @@ void PICsimulator::Simulator<dim>::run() {
         particle_handler.sort_particles_into_subdomains_and_cells();
         print_data_to_files(i);
     }
-}
-
-/// @brief set the initial velocity of each particle in the particle handler according to maxwell-boltzmann distribution (see documentation)
-/// @tparam dim 
-template<int dim>
-void PICsimulator::Simulator<dim>::set_initial_velocity()
-{
-    Tensor<1, dim> initial_velocity;
-    for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
-        for(int d = 0; d<dim; ++d){
-            initial_velocity[d] = normal_distr(gen);
-        }
-        it->set_properties(initial_velocity);
-    }
-
-    return;
-}
+};
 
 /// @brief creates the mesh
 /// @tparam dim 
@@ -183,7 +169,20 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     std::cout << "particles inserted!\n" << particle_handler.n_global_particles() << "\n";
 };
 
-
+/// @brief set the initial velocity of each particle in the particle handler according to maxwell-boltzmann distribution (see documentation)
+/// @tparam dim 
+template<int dim>
+void PICsimulator::Simulator<dim>::set_initial_velocity()
+{
+    Tensor<1, dim> initial_velocity;
+    for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
+        for(int d = 0; d<dim; ++d){
+            initial_velocity[d] = normal_distr(gen);
+        }
+        it->set_properties(initial_velocity);
+    }
+    return;
+};
 
 /// @brief called by the particle lost signal.
 /// @brief Instead of losing the particle when exiting the domain, the new position is computed and a new particle is inserted
