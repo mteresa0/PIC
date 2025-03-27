@@ -16,6 +16,8 @@
 #include <random>
 #include <type_traits>
 
+#include "domain.hpp"
+
 namespace PICsimulator{
 
     const double BOLTZMANN_K = 1.380649e-23;  // J/K
@@ -24,7 +26,7 @@ namespace PICsimulator{
     
     using namespace dealii;
 
-    template<int dim>
+    template<int dim, Domain::boundary_type btype>
     class Simulator{
         static_assert(dim==2||dim==3, "The dimension must must 2 or 3.");
 
@@ -32,7 +34,7 @@ namespace PICsimulator{
 
     public:
 
-        Simulator();
+        Simulator(const Domain::DomainData<dim, btype> &domain_data_ = Domain::DomainData<dim, btype>());
 
         void run();        
     
@@ -64,9 +66,11 @@ namespace PICsimulator{
         std::normal_distribution<double> normal_distr;
 
         // simulation parameters
-        double dt = 1e-8;
-        double T = 1e-5;
-        double particle_mass = ELECTR_MASS;
+        const double dt = 1e-8;
+        const double T = 1e-5;
+        const double particle_mass = ELECTR_MASS;
+
+        const Domain::DomainData<dim, btype> domain_data;
 
     };
 

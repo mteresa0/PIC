@@ -1,13 +1,14 @@
 #include "simulator.hpp"
 
-/// @brief constructor
-/// @tparam dim 
-template<int dim>
-PICsimulator::Simulator<dim>::Simulator() :
+template<int dim, Domain::boundary_type btype>
+PICsimulator::Simulator<dim, btype>::Simulator(
+    const Domain::DomainData<dim, btype> &domain_data_
+) :
 mapping(1), 
 particle_handler(triangulation, mapping, dim), 
 gen(rd()),
-normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
+normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS)),
+domain_data(domain_data_)
 {
     particle_handler.signals.particle_lost.connect(
     [this]( const typename Particles::ParticleIterator<dim>         &particle,
@@ -19,8 +20,8 @@ normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
 
 /// @brief run simulation
 /// @tparam dim 
-template<int dim>
-void PICsimulator::Simulator<dim>::run() {
+template<int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::run() {
     make_grid();
     insert_particles_dummy();
 
@@ -69,10 +70,14 @@ void PICsimulator::Simulator<dim>::run() {
 
 /// @brief creates the mesh
 /// @tparam dim 
-template<int dim>
-void PICsimulator::Simulator<dim>::make_grid() {
+template<int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::make_grid() {
 
-    dealii::GridGenerator::hyper_cube(triangulation);
+    dealii::GridGenerator::hyper_rectangle(
+        triangulation, 
+        domain_data.lower_vertex, 
+        domain_data.upper_vertex);
+
     triangulation.refine_global(4);
 
     std::cout << "Grid created" << std::endl;
@@ -86,8 +91,8 @@ void PICsimulator::Simulator<dim>::make_grid() {
 
 /// @brief dummy function that creates particles (it will be replaced)
 /// @tparam dim 
-template<int dim>
-void PICsimulator::Simulator<dim>::insert_particles_dummy()
+template<int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
 {
     int N = 5;
 
@@ -109,8 +114,8 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
 
 /// @brief set the initial velocity of each particle in the particle handler according to maxwell-boltzmann distribution (see documentation)
 /// @tparam dim 
-template<int dim>
-void PICsimulator::Simulator<dim>::set_initial_velocity()
+template<int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::set_initial_velocity()
 {
     Tensor<1, dim> initial_velocity;
     for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
@@ -127,8 +132,8 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
 /// @tparam dim 
 /// @param particle 
 /// @param cell 
-template <int dim>
-void PICsimulator::Simulator<dim>::boundary_wall( 
+template <int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::boundary_wall( 
     const typename Particles::ParticleIterator<dim>         &particle,
     const typename Triangulation<dim>::active_cell_iterator &cell) 
 {
@@ -136,31 +141,18 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     Tensor<1, dim> velocity(get_velocity(particle));
     std::vector<double> new_velocity(dim);
 
-    double upper_boundary = 1;
-    double lower_boundary = 0;
+    domain_data.out_of_boundaries(location, velocity);
 
-    for (int i = 0; i<dim; ++i){
-        if (location[i]<lower_boundary){
-            new_velocity[i] = 2*lower_boundary-velocity[i];
-            location[i] = -location[i];
-            // std::cout << "particle has been lost (<0)\n";
-        } else if (location[i]>upper_boundary){
-            new_velocity[i] = -velocity[i];
-            location[i] = 2*upper_boundary-location[i];
-            // std::cout << "particle has been lost (>1)\n";
-        } else {
-            new_velocity[i] = velocity[i];
-        }
+    for(int d = 0; d<dim; ++d){
+        new_velocity[d] = velocity[d];
     }
 
-    // add new particle
-    Particles::Particle new_particle(location, particle->get_reference_location(), particle->get_id());
-
-    particle_handler.insert_particle(location,
-    particle->get_reference_location(),
-    particle->get_id(),
-    cell,
-    new_velocity);    
+    particle_handler.insert_particle(
+        location,
+        particle->get_reference_location(),
+        particle->get_id(),
+        cell,
+        new_velocity);    
 
 }
 
@@ -168,8 +160,10 @@ void PICsimulator::Simulator<dim>::boundary_wall(
 /// @tparam dim 
 /// @param particle 
 /// @param velocity 
-template <int dim>
-void PICsimulator::Simulator<dim>::set_velocity(typename Particles::ParticleIterator<dim> &particle, const velocity_type &velocity)
+template <int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::set_velocity(
+    typename Particles::ParticleIterator<dim> &particle, 
+    const velocity_type &velocity)
 {
     particle->set_properties(velocity);
     return;
@@ -179,8 +173,10 @@ void PICsimulator::Simulator<dim>::set_velocity(typename Particles::ParticleIter
 /// @tparam dim 
 /// @param particle 
 /// @return 
-template <int dim>
-typename PICsimulator::Simulator<dim>::velocity_type PICsimulator::Simulator<dim>::get_velocity(const typename Particles::ParticleIterator<dim> &particle)
+template <int dim, Domain::boundary_type btype>
+typename PICsimulator::Simulator<dim, btype>::velocity_type 
+PICsimulator::Simulator<dim, btype>::get_velocity(
+    const typename Particles::ParticleIterator<dim> &particle)
 {
     return velocity_type(particle->get_properties());
 }
@@ -188,8 +184,10 @@ typename PICsimulator::Simulator<dim>::velocity_type PICsimulator::Simulator<dim
 /// @brief prints at a given timestep i the properties of each particle
 /// @tparam dim 
 /// @param i 
-template<int dim>
-void PICsimulator::Simulator<dim>::print_data_to_files(const int  & i){
+template<int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::print_data_to_files(
+    const int  & i)
+{
 
     Particles::DataOut<dim> particle_out;
     

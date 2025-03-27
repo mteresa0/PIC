@@ -6,17 +6,13 @@
 
 int main() {
 
-    dealii::Point<2> upper_v(1, 1);
-    dealii::Point<2> lower_v(0, 0);
-    dealii::Tensor<1, 2> vel;
-    Domain::DomainData<2, Domain::REFLECTIVE> domain_data_r(lower_v, upper_v);
-    domain_data_r.out_of_boundaries(upper_v, vel);
+    // dealii::Point<2> upper_v(1.5, 1);
+    // dealii::Point<2> lower_v(0, -0.2);
 
-    Domain::DomainData<2, Domain::PERIODIC> domain_data_p(lower_v, upper_v);
-    domain_data_p.out_of_boundaries(lower_v, vel);
-            
-    // PICsimulator::Simulator<2> sim;
+    // Domain::DomainData<2, Domain::PERIODIC> domain_data(lower_v, upper_v);
 
-    // sim.run();
+    PICsimulator::Simulator<2, Domain::PERIODIC> sim;
+
+    sim.run();
 
 }

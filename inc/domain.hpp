@@ -9,9 +9,28 @@ namespace Domain{
 
     enum boundary_type {
         REFLECTIVE,
-        PERIODIC
+        PERIODIC, 
+        INVALID // to be deleted
     };
 
+    namespace UnitSquare{
+        /// @brief return the lower vertex of the unit square (2D) or unit cube (3D) 
+        /// @tparam dim 
+        /// @return 
+        template<int dim>
+        Point<dim> get_lower_vertex();
+
+        /// @brief return the upper vertex of the unit square (2D) or unit cube (3D)
+        /// @tparam dim 
+        /// @return 
+        template<int dim>
+        Point<dim> get_upper_vertex();
+    };
+
+    /// @brief store the vertex of the domain (shaped like a rectangle (2D) or a parallelepiped (3D)) 
+    /// and the type of boundary conditions 
+    /// @tparam dim 
+    /// @tparam BTYPE 
     template<int dim, boundary_type BTYPE>
     class DomainData{
 
@@ -21,31 +40,56 @@ namespace Domain{
         using velocity_type = Tensor<1,dim>;
 
     public: 
-        // constructor
+        /// @brief constructor
+        /// @param lower_v_ 
+        /// @param upper_v_ 
         DomainData(
-            const location_type & lower_v_, 
-            const location_type & upper_v_) : 
+            const location_type & lower_v_ = UnitSquare::get_lower_vertex<dim>(), 
+            const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()): 
             lower_vertex(lower_v_), upper_vertex(upper_v_) {};
             
-        static constexpr boundary_type btype = BTYPE;
 
+        // lower and upper vertex of the domain (rectangle or parallelepiped)
         const location_type lower_vertex;
         const location_type upper_vertex;
 
-        void out_of_boundaries(
+        /// @brief updates location and velocity of a particle when it leaves the domain
+        /// @param loc 
+        /// @param vel 
+        void out_of_boundaries (
             location_type & loc, 
-            velocity_type & vel);
+            velocity_type & vel) const;
 
     };
 
+    // IMPLEMENTATION
+
+    template<>
+    inline Point<2> UnitSquare::get_lower_vertex(){
+        return Point<2>(0,0);
+    }
+
+    template<>
+    inline Point<2> UnitSquare::get_upper_vertex(){
+        return Point<2>(1,1);
+    }
+
+    template<>
+    inline Point<3> UnitSquare::get_lower_vertex(){
+        return Point<3>(0,0,0);
+    }
+
+    template<>
+    inline Point<3> UnitSquare::get_upper_vertex(){
+        return Point<3>(1,1,1);
+    }
+
     template <int dim, boundary_type BTYPE>
-    inline void DomainData<dim, BTYPE>::out_of_boundaries(location_type &location, velocity_type &velocity)
+    inline void DomainData<dim, BTYPE>::out_of_boundaries(location_type &location, velocity_type &velocity) const 
     {
         // if REFLECTIVE WALLS
-        if constexpr (btype==REFLECTIVE) 
+        if constexpr (BTYPE==REFLECTIVE) 
         {
-            std::cout << "reflective\n";
-
             for (int i = 0; i<dim; ++i){
                 if (location[i]<lower_vertex[i]){
                     location[i] = 2*lower_vertex[i]-location[i];
@@ -57,14 +101,11 @@ namespace Domain{
                     velocity[i] = velocity[i];
                     location[i] = location[i];
                 }
-            };
-            return;            
+            };        
         } 
         // if PERIODIC BOX
-        else if constexpr (btype==PERIODIC)
+        else if constexpr (BTYPE==PERIODIC)
         {
-            std::cout << "periodic\n";
-
             // location_type new_location(location);
             location_type difference(upper_vertex - lower_vertex);
 
@@ -76,11 +117,12 @@ namespace Domain{
                     location[i] -= difference[i];
                 }
             }
-            return;
+        } 
+        // with an invalid type, in compile time i should have an error given by the static_assert (only for the invalid type)
+        else 
+        {
+            static_assert(false, "invalid boundary type");
         }
-
-        std::cerr << "boundary type chosen is invalid\n";
-        return;
         
     }
 
