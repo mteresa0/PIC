@@ -18,8 +18,6 @@ domain_data(domain_data_)
     );
 };
 
-/// @brief run simulation
-/// @tparam dim 
 template<int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::run() {
     make_grid();
@@ -68,8 +66,6 @@ void PICsimulator::Simulator<dim, btype>::run() {
     }
 };
 
-/// @brief creates the mesh
-/// @tparam dim 
 template<int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::make_grid() {
 
@@ -89,8 +85,6 @@ void PICsimulator::Simulator<dim, btype>::make_grid() {
 
 };
 
-/// @brief dummy function that creates particles (it will be replaced)
-/// @tparam dim 
 template<int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
 {
@@ -112,8 +106,6 @@ void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
     std::cout << "particles inserted!\n" << particle_handler.n_global_particles() << "\n";
 };
 
-/// @brief set the initial velocity of each particle in the particle handler according to maxwell-boltzmann distribution (see documentation)
-/// @tparam dim 
 template<int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::set_initial_velocity()
 {
@@ -127,11 +119,6 @@ void PICsimulator::Simulator<dim, btype>::set_initial_velocity()
     return;
 };
 
-/// @brief called by the particle lost signal.
-/// @brief Instead of losing the particle when exiting the domain, the new position is computed and a new particle is inserted
-/// @tparam dim 
-/// @param particle 
-/// @param cell 
 template <int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::boundary_wall( 
     const typename Particles::ParticleIterator<dim>         &particle,
@@ -156,10 +143,6 @@ void PICsimulator::Simulator<dim, btype>::boundary_wall(
 
 }
 
-/// @brief set the velocity of a particle
-/// @tparam dim 
-/// @param particle 
-/// @param velocity 
 template <int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::set_velocity(
     typename Particles::ParticleIterator<dim> &particle, 
@@ -169,10 +152,6 @@ void PICsimulator::Simulator<dim, btype>::set_velocity(
     return;
 }
 
-/// @brief get the velocity of a particle
-/// @tparam dim 
-/// @param particle 
-/// @return 
 template <int dim, Domain::boundary_type btype>
 typename PICsimulator::Simulator<dim, btype>::velocity_type 
 PICsimulator::Simulator<dim, btype>::get_velocity(
@@ -181,9 +160,6 @@ PICsimulator::Simulator<dim, btype>::get_velocity(
     return velocity_type(particle->get_properties());
 }
 
-/// @brief prints at a given timestep i the properties of each particle
-/// @tparam dim 
-/// @param i 
 template<int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::print_data_to_files(
     const int  & i)

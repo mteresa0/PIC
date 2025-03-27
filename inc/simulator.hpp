@@ -34,26 +34,50 @@ namespace PICsimulator{
 
     public:
 
+        /// @brief constructor
+        /// @param domain_data_ 
         Simulator(const Domain::DomainData<dim, btype> &domain_data_ = Domain::DomainData<dim, btype>());
-
+        
+        /// @brief run simulation
         void run();        
     
     private:
 
+        //// INIZIALIZATION FUNCTIONS
+
+        /// @brief create the grid
         void make_grid();
+        /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();
+        /// @brief set initial velocity of each particles according to maxwell-boltzmann distribution
         void set_initial_velocity();
 
+        /// @brief called by the particle lost signal. 
+        /// It handles lost particles and reinsert them in the domain according to btype 
+        /// @param particle 
+        /// @param cell 
         void boundary_wall(
             const typename Particles::ParticleIterator<dim>         &particle,
             const typename Triangulation<dim>::active_cell_iterator &cell);
 
-        // setter and getter for velocity
+        //// SETTERS AND GETTERS
+
+        /// @brief set the velocity of a particle
+        /// @param particle
+        /// @param velocity
         void set_velocity(typename Particles::ParticleIterator<dim> &particle, const velocity_type &velocity);
+        /// @brief get the velocity of a particle
+        /// @param particle
+        /// @return 
         velocity_type get_velocity(const typename Particles::ParticleIterator<dim> &particle);
 
-        // print data to files
+        //// PRINTING FUNCTIONS
+
+        /// @brief prints at a given timestep i the properties of each particle
+        /// @param i timestep index
         void print_data_to_files(const int &);
+
+        //// DATA MEMBERS
 
         // dealii objects
         dealii::Triangulation<dim>              triangulation;
@@ -70,6 +94,7 @@ namespace PICsimulator{
         const double T = 1e-5;
         const double particle_mass = ELECTR_MASS;
 
+        // storing domain data
         const Domain::DomainData<dim, btype> domain_data;
 
     };
