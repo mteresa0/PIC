@@ -6,6 +6,7 @@
 #include <deal.II/grid/grid_generator.h>
 #include <deal.II/grid/grid_out.h>
 #include <deal.II/fe/mapping_q.h>
+#include <deal.II/dofs/dof_handler.h>
 #include <deal.II/particles/particle_handler.h>
 #include <deal.II/particles/particle_iterator.h>
 #include <deal.II/particles/particle_accessor.h>
@@ -47,8 +48,10 @@ namespace PICsimulator{
 
         /// @brief create the grid
         void make_grid();
+
         /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();
+
         /// @brief set initial velocity of each particles according to maxwell-boltzmann distribution
         void set_initial_velocity();
 
@@ -60,12 +63,17 @@ namespace PICsimulator{
             const typename Particles::ParticleIterator<dim>         &particle,
             const typename Triangulation<dim>::active_cell_iterator &cell);
 
+        //// SIMULATION FUNCTIONS
+        void update_position();
+        void update_velocity();
+
         //// SETTERS AND GETTERS
 
         /// @brief set the velocity of a particle
         /// @param particle
         /// @param velocity
         void set_velocity(typename Particles::ParticleIterator<dim> &particle, const velocity_type &velocity);
+
         /// @brief get the velocity of a particle
         /// @param particle
         /// @return 
@@ -82,6 +90,7 @@ namespace PICsimulator{
         // dealii objects
         dealii::Triangulation<dim>              triangulation;
         const dealii::MappingQ<dim>             mapping;
+        DoFHandler<dim>                         dof_handler;
         dealii::Particles::ParticleHandler<dim> particle_handler;
 
         // random generators for maxwell distribution of velocity

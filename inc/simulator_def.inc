@@ -5,6 +5,7 @@ PICsimulator::Simulator<dim, btype>::Simulator(
     const Domain::DomainData<dim, btype> &domain_data_
 ) :
 mapping(1), 
+dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
 gen(rd()),
 normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS)),
@@ -24,7 +25,7 @@ void PICsimulator::Simulator<dim, btype>::run() {
     insert_particles_dummy();
 
     unsigned int NT = T/dt;
-    std::cout << NT << std::endl;
+    std::cout << "# timepsteps: " << NT << std::endl;
 
     std::vector<double> total_kinetic_energy(NT, 0);
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
@@ -32,13 +33,23 @@ void PICsimulator::Simulator<dim, btype>::run() {
 
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
+
+        // update position
+        update_position();
+
+        // // evaluate forces
+        // evaluate_forces();
+
+        // update velocity
+        update_velocity();
+
         for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
-            Point<dim> position(it->get_location());
+            // Point<dim> position(it->get_location());
             const Tensor<1, dim> velocity(get_velocity(it));
             
-            // update position
-            it->set_location(position + dt*velocity);
+            // // update position
+            // it->set_location(position + dt*velocity);
 
             // update velocity
             // set_velocity(it, velocity);
@@ -49,6 +60,7 @@ void PICsimulator::Simulator<dim, btype>::run() {
             sum_vels += velocity;
 
         }
+
         total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
 
         // sort particles into cells
@@ -141,6 +153,46 @@ void PICsimulator::Simulator<dim, btype>::boundary_wall(
         cell,
         new_velocity);    
 
+}
+
+template <int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::update_position()
+{
+    for (const auto & cell: dof_handler.active_cell_iterators())
+    {
+        // compute acceleration
+        Tensor<1, dim> acceleration;
+
+        const auto pic_cell = particle_handler.particles_in_cell(cell);
+        for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
+        {
+            Point<dim> position(it->get_location());
+            const Tensor<1, dim> velocity(get_velocity(it));
+            
+            // update position
+            it->set_location(position + dt*velocity + 1/2*dt*dt*acceleration);
+        }
+    }
+}
+
+template <int dim, Domain::boundary_type btype>
+void PICsimulator::Simulator<dim, btype>::update_velocity()
+{
+    for (const auto & cell: dof_handler.active_cell_iterators())
+    {
+        // compute acceleration
+        Tensor<1, dim> new_acceleration;
+        Tensor<1, dim> old_acceleration;
+
+        const auto pic_cell = particle_handler.particles_in_cell(cell);
+        for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
+        {
+            const Tensor<1, dim> velocity(get_velocity(it));
+            
+            // update position
+            set_velocity(it, velocity + 1/2*dt*(new_acceleration + old_acceleration));
+        }
+    }
 }
 
 template <int dim, Domain::boundary_type btype>
