@@ -30,6 +30,8 @@ void PICsimulator::Simulator<dim, btype>::run() {
     std::vector<double> total_kinetic_energy(NT, 0);
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
      
+    tic();
+    restart_DT_sort();
 
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
@@ -43,32 +45,40 @@ void PICsimulator::Simulator<dim, btype>::run() {
         // update velocity
         update_velocity();
 
-        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
-            // Point<dim> position(it->get_location());
-            const Tensor<1, dim> velocity(get_velocity(it));
-            
-            // // update position
-            // it->set_location(position + dt*velocity);
+            for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
+            {
+                // Point<dim> position(it->get_location());
+                const Tensor<1, dim> &velocity(get_velocity(it));
+                
+                // // update position
+                // it->set_location(position + dt*velocity);
 
-            // update velocity
-            // set_velocity(it, velocity);
-            
-            // save kinetic energy per particle
-            double ke = particle_mass * velocity.norm();
-            sum_particles_kinetic_energy[i] += ke;
-            sum_vels += velocity;
+                // update velocity
+                // set_velocity(it, velocity);
+                
+                // save kinetic energy per particle
+                double ke = particle_mass * velocity.norm();
+                sum_particles_kinetic_energy[i] += ke;
+                sum_vels += velocity;
 
+            }
         }
 
         total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
 
         // sort particles into cells
+        start_chrono_sort();
         particle_handler.sort_particles_into_subdomains_and_cells();
 
         // print data to files
         print_data_to_files(i);
+        add_time();
     }
+
+    toc();
+    std::cout << "Simulation completed in " << DT      << " seconds" << std::endl; 
+    std::cout << "sort particles time:    " << DT_sort << " seconds" << std::endl;
 
     // print kinetic energies into csv
     std::ofstream output("outputs/total_kinetic_energy.csv");
@@ -100,7 +110,7 @@ void PICsimulator::Simulator<dim, btype>::make_grid() {
 template<int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
 {
-    int N = 5;
+    int N = 3;
 
     Point<dim> initial_pos_vector;
 
@@ -148,11 +158,10 @@ void PICsimulator::Simulator<dim, btype>::boundary_wall(
 
     particle_handler.insert_particle(
         location,
-        particle->get_reference_location(),
+        mapping.transform_real_to_unit_cell(cell, location),
         particle->get_id(),
         cell,
-        new_velocity);    
-
+        new_velocity);   
 }
 
 template <int dim, Domain::boundary_type btype>

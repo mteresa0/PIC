@@ -18,6 +18,26 @@
 #include <type_traits>
 
 #include "domain.hpp"
+#include <chrono>
+
+static std::chrono::time_point<std::chrono::high_resolution_clock> start_chrono, starting_time_sorting;
+static double DT, DT_sort;
+
+#define tic() start_chrono = std::chrono::high_resolution_clock::now();
+#define toc()                                                               \
+{                                                                           \
+    auto now = std::chrono::high_resolution_clock::now();                   \
+    std::chrono::duration<double> diff = now - start_chrono;                \
+    DT = diff.count();                                                      \
+}
+#define start_chrono_sort() {starting_time_sorting = std::chrono::high_resolution_clock::now();}
+#define restart_DT_sort() {DT_sort = 0;}
+#define add_time() {                                                        \
+    auto now = std::chrono::high_resolution_clock::now();                   \
+    std::chrono::duration<double> diff = now - starting_time_sorting;       \
+    DT_sort += diff.count();                                                \
+}
+
 
 namespace PICsimulator{
 
@@ -64,7 +84,10 @@ namespace PICsimulator{
             const typename Triangulation<dim>::active_cell_iterator &cell);
 
         //// SIMULATION FUNCTIONS
+
+        /// @brief update the position according to Verlet algorithm
         void update_position();
+        /// @brief update the velocity according to Verlet algorithm
         void update_velocity();
 
         //// SETTERS AND GETTERS
