@@ -1,8 +1,8 @@
 #include "simulator.hpp"
 
-template<int dim, Domain::boundary_type btype>
-PICsimulator::Simulator<dim, btype>::Simulator(
-    const Domain::DomainData<dim, btype> &domain_data_, 
+template<int dim>
+PICsimulator::Simulator<dim>::Simulator(
+    const Domain::DomainData<dim> &domain_data_, 
     const double &dt_,
     const double &T_):
 mapping(1), 
@@ -22,8 +22,8 @@ domain_data(domain_data_)
     );
 };
 
-template<int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::run() {
+template<int dim>
+void PICsimulator::Simulator<dim>::run() {
     std::cout << "-------- starting initialization --------" << std::endl;
     make_grid();
     insert_particles_dummy();
@@ -95,8 +95,8 @@ void PICsimulator::Simulator<dim, btype>::run() {
     }
 };
 
-template<int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::make_grid() {
+template<int dim>
+void PICsimulator::Simulator<dim>::make_grid() {
 
     dealii::GridGenerator::hyper_rectangle(
         triangulation, 
@@ -113,10 +113,10 @@ void PICsimulator::Simulator<dim, btype>::make_grid() {
 
 };
 
-template<int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
+template<int dim>
+void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
-    int N = 3;
+    int N = 3; // move it from here please!!!
 
     Point<dim> initial_pos_vector;
 
@@ -135,8 +135,8 @@ void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
     std::cout << "Inserted " << particle_handler.n_global_particles() << " particles \n";
 };
 
-template<int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::set_initial_velocity()
+template<int dim>
+void PICsimulator::Simulator<dim>::set_initial_velocity()
 {
     Tensor<1, dim> initial_velocity;
     for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
@@ -148,8 +148,8 @@ void PICsimulator::Simulator<dim, btype>::set_initial_velocity()
     return;
 };
 
-template <int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::boundary_wall( 
+template <int dim>
+void PICsimulator::Simulator<dim>::boundary_wall( 
     const typename Particles::ParticleIterator<dim>         &particle,
     const typename Triangulation<dim>::active_cell_iterator &cell) 
 {
@@ -171,8 +171,8 @@ void PICsimulator::Simulator<dim, btype>::boundary_wall(
         new_velocity);   
 }
 
-template <int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::update_position()
+template <int dim>
+void PICsimulator::Simulator<dim>::update_position()
 {
     for (const auto & cell: dof_handler.active_cell_iterators())
     {
@@ -191,8 +191,8 @@ void PICsimulator::Simulator<dim, btype>::update_position()
     }
 }
 
-template <int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::update_velocity()
+template <int dim>
+void PICsimulator::Simulator<dim>::update_velocity()
 {
     for (const auto & cell: dof_handler.active_cell_iterators())
     {
@@ -211,8 +211,8 @@ void PICsimulator::Simulator<dim, btype>::update_velocity()
     }
 }
 
-template <int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::set_velocity(
+template <int dim>
+void PICsimulator::Simulator<dim>::set_velocity(
     typename Particles::ParticleIterator<dim> &particle, 
     const velocity_type &velocity)
 {
@@ -220,16 +220,16 @@ void PICsimulator::Simulator<dim, btype>::set_velocity(
     return;
 }
 
-template <int dim, Domain::boundary_type btype>
-typename PICsimulator::Simulator<dim, btype>::velocity_type
-PICsimulator::Simulator<dim, btype>::get_velocity(
+template <int dim>
+typename PICsimulator::Simulator<dim>::velocity_type
+PICsimulator::Simulator<dim>::get_velocity(
     const typename Particles::ParticleIterator<dim> &particle)
 {
     return velocity_type(particle->get_properties());
 }
 
-template<int dim, Domain::boundary_type btype>
-void PICsimulator::Simulator<dim, btype>::print_data_to_files(
+template<int dim>
+void PICsimulator::Simulator<dim>::print_data_to_files(
     const int  & i)
 {
 

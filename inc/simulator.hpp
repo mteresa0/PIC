@@ -47,7 +47,15 @@ namespace PICsimulator{
     
     using namespace dealii;
 
-    template<int dim, Domain::boundary_type btype>
+    template<int dim>
+    Domain::ReflectiveDomainData<dim> initDomain;
+
+    template<int dim>
+    const Domain::DomainData<dim>& get_default_domain() {
+        return initDomain<dim>;  // Return reference to the instantiated object
+    }
+
+    template<int dim>
     class Simulator{
         static_assert(dim==2||dim==3, "The dimension must must 2 or 3.");
 
@@ -58,7 +66,7 @@ namespace PICsimulator{
         /// @brief constructor
         /// @param domain_data_ 
         Simulator(
-            const Domain::DomainData<dim, btype> &domain_data_ = Domain::DomainData<dim, btype>(),
+            const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>(),
             const double &dt_ = 1e-8,
             const double &T_ = 1e-5);
         
@@ -138,7 +146,7 @@ namespace PICsimulator{
         const double particle_mass = ELECTR_MASS;
 
         // storing domain data
-        const Domain::DomainData<dim, btype> domain_data;
+        const Domain::DomainData<dim> & domain_data;
 
     };
 
