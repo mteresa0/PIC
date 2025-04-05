@@ -64,13 +64,33 @@ namespace Domain{
 
     };
 
+    /// @brief domain with elastic collisions against the "walls"
+    /// @tparam dim 
     template<int dim>
-    class ReflectiveDomainData : public DomainData<dim>{
+    class ReflectiveDomain : public DomainData<dim>{
     public:
         using location_type = typename DomainData<dim>::location_type;
         using velocity_type = typename DomainData<dim>::velocity_type;
 
-        ReflectiveDomainData(
+        ReflectiveDomain(
+            const location_type & lower_v_ = UnitSquare::get_lower_vertex<dim>(), 
+            const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()): 
+            DomainData<dim>(lower_v_, upper_v_) {};
+
+        void out_of_boundaries(
+            location_type & loc, 
+            velocity_type & vel) const override;
+    };
+
+    /// @brief periodic box domain
+    /// @tparam dim 
+    template<int dim>
+    class PeriodicDomain : public DomainData<dim>{
+    public:
+        using location_type = typename DomainData<dim>::location_type;
+        using velocity_type = typename DomainData<dim>::velocity_type;
+
+        PeriodicDomain(
             const location_type & lower_v_ = UnitSquare::get_lower_vertex<dim>(), 
             const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()): 
             DomainData<dim>(lower_v_, upper_v_) {};
@@ -103,73 +123,45 @@ namespace Domain{
         return Point<3>(1,1,1);
     }
 
-    // template <int dim, boundary_type BTYPE>
-    // inline void DomainData<dim, BTYPE>::out_of_boundaries(location_type &location, velocity_type &velocity) const 
-    // {
-    //     // if REFLECTIVE WALLS
-    //     if constexpr (BTYPE==REFLECTIVE) 
-    //     {
-    //         for (int i = 0; i<dim; ++i){
-    //             if (location[i]<lower_vertex[i]){
-    //                 location[i] = 2*lower_vertex[i]-location[i];
-    //                 velocity[i] = -velocity[i];
-    //             } else if (location[i]>upper_vertex[i]){
-    //                 location[i] = 2*upper_vertex[i]-location[i];
-    //                 velocity[i] = -velocity[i];
-    //             } else {
-    //                 velocity[i] = velocity[i];
-    //                 location[i] = location[i];
-    //             }
-    //         };        
-    //     } 
-    //     // if PERIODIC BOX
-    //     else if constexpr (BTYPE==PERIODIC)
-    //     {
-    //         // location_type new_location(location);
-    //         location_type difference(upper_vertex - lower_vertex);
-
-    //         for (int i = 0; i<dim; ++i){
-    //             if (location[i]<lower_vertex[i]){
-    //                 location[i] += difference[i];
-    //             }  
-    //             else if (location[i]>upper_vertex[i]){
-    //                 location[i] -= difference[i];
-    //             }
-    //         }
-    //     } 
-    //     // with an invalid type, in compile time i should have an error given by the static_assert (only for the invalid type)
-    //     else 
-    //     {
-    //         static_assert(false, "invalid boundary type");
-    //     }
-        
-    // }
-
     template <int dim>
     inline void DomainData<dim>::out_of_boundaries(location_type &, velocity_type &) const
     {
         std::cout << "base datadomain" << std::endl;
     }
 
+    template<int dim>
+    inline void ReflectiveDomain<dim>::out_of_boundaries(location_type & location, velocity_type & velocity) const
+    {
+        for (int i = 0; i<dim; ++i){
+            if (location[i]<this->lower_vertex[i]){
+                location[i] = 2*this->lower_vertex[i]-location[i];
+                velocity[i] = -velocity[i];
+            } else if (location[i]>this->upper_vertex[i]){
+                location[i] = 2*this->upper_vertex[i]-location[i];
+                velocity[i] = -velocity[i];
+            } else {
+                velocity[i] = velocity[i];
+                location[i] = location[i];
+            }
+        };   
+        return;
+    }
 
+    template<int dim>
+    inline void PeriodicDomain<dim>::out_of_boundaries(location_type & location, velocity_type & ) const
+    {
+        location_type difference(this->upper_vertex - this->lower_vertex);
 
-template<int dim>
-inline void ReflectiveDomainData<dim>::out_of_boundaries(location_type & location, velocity_type & velocity) const
-{
-    // std::cout << "Reflective domain" << std::endl;
-    for (int i = 0; i<dim; ++i){
-        if (location[i]<this->lower_vertex[i]){
-            location[i] = 2*this->lower_vertex[i]-location[i];
-            velocity[i] = -velocity[i];
-        } else if (location[i]>this->upper_vertex[i]){
-            location[i] = 2*this->upper_vertex[i]-location[i];
-            velocity[i] = -velocity[i];
-        } else {
-            velocity[i] = velocity[i];
-            location[i] = location[i];
+        for (int i = 0; i<dim; ++i){
+            if (location[i]<this->lower_vertex[i]){
+                location[i] += difference[i];
+            }  
+            else if (location[i]>this->upper_vertex[i]){
+                location[i] -= difference[i];
+            }
         }
-    };   
-}
+        return;
+    }
 
-}
+} // end namespace Domain
 #endif // DOMAIN_HPP

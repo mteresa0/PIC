@@ -48,7 +48,7 @@ namespace PICsimulator{
     using namespace dealii;
 
     template<int dim>
-    Domain::ReflectiveDomainData<dim> initDomain;
+    Domain::ReflectiveDomain<dim> initDomain;
 
     template<int dim>
     const Domain::DomainData<dim>& get_default_domain() {
