@@ -57,14 +57,24 @@ namespace PICsimulator{
 
         /// @brief constructor
         /// @param domain_data_ 
-        Simulator(const Domain::DomainData<dim, btype> &domain_data_ = Domain::DomainData<dim, btype>());
+        Simulator(
+            const Domain::DomainData<dim, btype> &domain_data_ = Domain::DomainData<dim, btype>(),
+            const double &dt_ = 1e-8,
+            const double &T_ = 1e-5);
         
         /// @brief run simulation
         void run();        
     
     private:
 
+        //// INITIALIZATION VARIABLES
+        bool initialized = false;
+        unsigned int n_particles = 0;
+
         //// INIZIALIZATION FUNCTIONS
+
+        /// @brief initialize grid and particles
+        void initialize();
 
         /// @brief create the grid
         void make_grid();
@@ -87,6 +97,7 @@ namespace PICsimulator{
 
         /// @brief update the position according to Verlet algorithm
         void update_position();
+
         /// @brief update the velocity according to Verlet algorithm
         void update_velocity();
 
@@ -122,8 +133,8 @@ namespace PICsimulator{
         std::normal_distribution<double> normal_distr;
 
         // simulation parameters
-        const double dt = 1e-8;
-        const double T = 1e-5;
+        const double dt;
+        const double T;
         const double particle_mass = ELECTR_MASS;
 
         // storing domain data

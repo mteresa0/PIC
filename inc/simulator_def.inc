@@ -2,13 +2,16 @@
 
 template<int dim, Domain::boundary_type btype>
 PICsimulator::Simulator<dim, btype>::Simulator(
-    const Domain::DomainData<dim, btype> &domain_data_
-) :
+    const Domain::DomainData<dim, btype> &domain_data_, 
+    const double &dt_,
+    const double &T_):
 mapping(1), 
 dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
 gen(rd()),
 normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS)),
+dt(dt_),
+T(T_),
 domain_data(domain_data_)
 {
     particle_handler.signals.particle_lost.connect(
@@ -21,15 +24,19 @@ domain_data(domain_data_)
 
 template<int dim, Domain::boundary_type btype>
 void PICsimulator::Simulator<dim, btype>::run() {
+    std::cout << "-------- starting initialization --------" << std::endl;
     make_grid();
     insert_particles_dummy();
 
     unsigned int NT = T/dt;
-    std::cout << "# timepsteps: " << NT << std::endl;
+    std::cout << "# timepsteps: " << NT;
+    std::cout << " ( dt: " << dt;
+    std::cout << "; T: "  << T << " )" << std::endl;
 
     std::vector<double> total_kinetic_energy(NT, 0);
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
      
+    std::cout << "---------- starting simulation ----------" << std::endl;
     tic();
     restart_DT_sort();
 
@@ -70,10 +77,10 @@ void PICsimulator::Simulator<dim, btype>::run() {
         // sort particles into cells
         start_chrono_sort();
         particle_handler.sort_particles_into_subdomains_and_cells();
+        add_time();
 
         // print data to files
         print_data_to_files(i);
-        add_time();
     }
 
     toc();
@@ -103,7 +110,6 @@ void PICsimulator::Simulator<dim, btype>::make_grid() {
     std::ofstream out("outputs/grid.vtk");
     dealii::GridOut     gridout;
     gridout.write_vtk(triangulation, out);
-    std::cout << "grid written in vtk" << std::endl;
 
 };
 
@@ -115,7 +121,8 @@ void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
     Point<dim> initial_pos_vector;
 
     for(int n = 0; n<dim; ++n){
-        initial_pos_vector[n] = 0.5;
+        initial_pos_vector[n] = domain_data.lower_vertex[n] + 
+            (domain_data.upper_vertex[n] - domain_data.lower_vertex[n]) * 0.5;
     }
     
     std::vector<Point<dim>> positions(N, initial_pos_vector);
@@ -125,7 +132,7 @@ void PICsimulator::Simulator<dim, btype>::insert_particles_dummy()
     // set velocities
     set_initial_velocity();
 
-    std::cout << "particles inserted!\n" << particle_handler.n_global_particles() << "\n";
+    std::cout << "Inserted " << particle_handler.n_global_particles() << " particles \n";
 };
 
 template<int dim, Domain::boundary_type btype>
@@ -176,7 +183,7 @@ void PICsimulator::Simulator<dim, btype>::update_position()
         for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
         {
             Point<dim> position(it->get_location());
-            const Tensor<1, dim> velocity(get_velocity(it));
+            const Tensor<1, dim> &velocity(get_velocity(it));
             
             // update position
             it->set_location(position + dt*velocity + 1/2*dt*dt*acceleration);
@@ -196,7 +203,7 @@ void PICsimulator::Simulator<dim, btype>::update_velocity()
         const auto pic_cell = particle_handler.particles_in_cell(cell);
         for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
         {
-            const Tensor<1, dim> velocity(get_velocity(it));
+            const Tensor<1, dim> &velocity(get_velocity(it));
             
             // update position
             set_velocity(it, velocity + 1/2*dt*(new_acceleration + old_acceleration));
@@ -214,7 +221,7 @@ void PICsimulator::Simulator<dim, btype>::set_velocity(
 }
 
 template <int dim, Domain::boundary_type btype>
-typename PICsimulator::Simulator<dim, btype>::velocity_type 
+typename PICsimulator::Simulator<dim, btype>::velocity_type
 PICsimulator::Simulator<dim, btype>::get_velocity(
     const typename Particles::ParticleIterator<dim> &particle)
 {

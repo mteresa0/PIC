@@ -32,7 +32,7 @@ namespace Domain{
     /// @tparam dim 
     /// @tparam BTYPE 
     template<int dim, boundary_type BTYPE>
-    class DomainData{
+    struct DomainData{
 
         static_assert(dim==2||dim==3, "Only 2D and 3D domain are allowed");
 
