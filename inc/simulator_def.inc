@@ -100,8 +100,8 @@ void PICsimulator::Simulator<dim>::make_grid() {
 
     dealii::GridGenerator::hyper_rectangle(
         triangulation, 
-        domain_data.lower_vertex, 
-        domain_data.upper_vertex);
+        domain_data.get_lower_vertex(), 
+        domain_data.get_upper_vertex());
 
     triangulation.refine_global(4);
 
@@ -120,9 +120,12 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
 
     Point<dim> initial_pos_vector;
 
+    auto upper_vertex = domain_data.get_upper_vertex();
+    auto lower_vertex = domain_data.get_lower_vertex();
+
     for(int n = 0; n<dim; ++n){
-        initial_pos_vector[n] = domain_data.lower_vertex[n] + 
-            (domain_data.upper_vertex[n] - domain_data.lower_vertex[n]) * 0.5;
+        initial_pos_vector[n] = lower_vertex[n] + 
+            (upper_vertex[n] - lower_vertex[n]) * 0.5;
     }
     
     std::vector<Point<dim>> positions(N, initial_pos_vector);

@@ -50,10 +50,6 @@ namespace Domain{
             };
         
         virtual ~DomainData() = default;
-    public:
-        // lower and upper vertex of the domain (rectangle or parallelepiped)
-        const location_type lower_vertex;
-        const location_type upper_vertex;
 
         /// @brief updates location and velocity of a particle when it leaves the domain
         /// @param loc 
@@ -61,6 +57,25 @@ namespace Domain{
         virtual void out_of_boundaries (
             location_type & loc, 
             velocity_type & vel) const;
+
+        /// @brief returns the lower vertex of the domain
+        /// @return
+        const location_type & get_lower_vertex() const {
+            return lower_vertex;
+        }
+
+        /// @brief returns the upper vertex of the domain
+        /// @return
+        const location_type & get_upper_vertex() const {
+            return upper_vertex;
+        }
+
+    protected:
+
+        // lower and upper vertex of the domain (rectangle or parallelepiped)
+        const location_type lower_vertex;
+        const location_type upper_vertex;
+
 
     };
 
