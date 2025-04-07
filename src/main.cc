@@ -1,15 +1,20 @@
 #include "simulator.hpp"
 #include "domain.hpp"
+#include "test_simulators.hpp"
 
 // #include "deal.II/base/point.h"
-// #include "deal.II/base/tensor.h"
+#include "deal.II/base/tensor.h"
 
 int main() {
 
-    Domain::PeriodicDomain<2> domain_data;
+    constexpr int dim = 2;
 
-    PICsimulator::Simulator<2> sim(domain_data);
+    Domain::PeriodicDomain<dim> domain_data;
+    dealii::Tensor<1, dim> vel;
+    vel[0] = 10; vel[1] = 10.9;
 
-    sim.run();
+    TestSimulators::TestConstantVelocity<dim> sim(domain_data, 1e-8, 1e-6, vel);
+
+    sim.run_test();
 
 }

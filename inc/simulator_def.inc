@@ -25,8 +25,7 @@ domain_data(domain_data_)
 template<int dim>
 void PICsimulator::Simulator<dim>::run() {
     std::cout << "-------- starting initialization --------" << std::endl;
-    make_grid();
-    insert_particles_dummy();
+    initialize();
 
     unsigned int NT = T/dt;
     std::cout << "# timepsteps: " << NT;
@@ -43,20 +42,13 @@ void PICsimulator::Simulator<dim>::run() {
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
 
-        // update position
-        update_position();
-
-        // // evaluate forces
-        // evaluate_forces();
-
-        // update velocity
-        update_velocity();
+        update_simulation_state();
 
         {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
             {
                 // Point<dim> position(it->get_location());
-                const Tensor<1, dim> &velocity(get_velocity(it));
+                const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
                 
                 // // update position
                 // it->set_location(position + dt*velocity);
@@ -157,7 +149,7 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     const typename Triangulation<dim>::active_cell_iterator &cell) 
 {
     Point<dim> location(particle->get_location());
-    Tensor<1, dim> velocity(get_velocity(particle));
+    Tensor<1, dim> velocity(get_velocity_from_properties(particle));
     std::vector<double> new_velocity(dim);
 
     domain_data.out_of_boundaries(location, velocity);
@@ -175,6 +167,40 @@ void PICsimulator::Simulator<dim>::boundary_wall(
 }
 
 template <int dim>
+void PICsimulator::Simulator<dim>::initialize()
+{
+    if (initialized)
+    {
+        std::cout << "Already initialized with:" << std::endl;
+        std::cout << "n# particles: " << particle_handler.n_global_particles() << std::endl;
+        std::cout << "n# cells: "     << triangulation.n_active_cells() << std::endl;
+        return;
+    }
+
+    // initialize grid and particles
+    make_grid();
+    insert_particles_dummy();
+
+    initialized = true;
+    return;
+}
+
+template <int dim>
+void PICsimulator::Simulator<dim>::update_simulation_state()
+{
+    // update position
+    update_position();
+
+    // // evaluate forces
+    // evaluate_forces();
+
+    // update velocity
+    update_velocity();
+
+    return;
+}
+
+template <int dim>
 void PICsimulator::Simulator<dim>::update_position()
 {
     for (const auto & cell: dof_handler.active_cell_iterators())
@@ -186,7 +212,7 @@ void PICsimulator::Simulator<dim>::update_position()
         for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
         {
             Point<dim> position(it->get_location());
-            const Tensor<1, dim> &velocity(get_velocity(it));
+            const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
             
             // update position
             it->set_location(position + dt*velocity + 1/2*dt*dt*acceleration);
@@ -206,7 +232,7 @@ void PICsimulator::Simulator<dim>::update_velocity()
         const auto pic_cell = particle_handler.particles_in_cell(cell);
         for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
         {
-            const Tensor<1, dim> &velocity(get_velocity(it));
+            const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
             
             // update position
             set_velocity(it, velocity + 1/2*dt*(new_acceleration + old_acceleration));
@@ -225,7 +251,7 @@ void PICsimulator::Simulator<dim>::set_velocity(
 
 template <int dim>
 typename PICsimulator::Simulator<dim>::velocity_type
-PICsimulator::Simulator<dim>::get_velocity(
+PICsimulator::Simulator<dim>::get_velocity_from_properties(
     const typename Particles::ParticleIterator<dim> &particle)
 {
     return velocity_type(particle->get_properties());
