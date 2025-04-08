@@ -8,11 +8,11 @@ PICsimulator::Simulator<dim>::Simulator(
 mapping(1), 
 dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
-gen(rd()),
-normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS)),
 dt(dt_),
 T(T_),
-domain_data(domain_data_)
+domain_data(domain_data_),
+gen(rd()),
+normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
 {
     particle_handler.signals.particle_lost.connect(
     [this]( const typename Particles::ParticleIterator<dim>         &particle,
