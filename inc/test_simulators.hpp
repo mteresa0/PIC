@@ -9,6 +9,9 @@ namespace TestSimulators
 {
     using namespace dealii;
 
+    /// @brief Test simulator base class. 
+    /// @brief Test different scenario described in the derived classes.
+    /// @tparam dim 
     template<int dim>
     class TestSimulator : public PICsimulator::Simulator<dim>
     {
@@ -26,18 +29,36 @@ namespace TestSimulators
         virtual void run_test() = 0;
 
     protected:
+        /// @brief initialize grid and particle handler
         void initialize() override;
 
+        /// @brief initialize particle
         virtual void initialize_particles() = 0;
+
+        /// @brief initialize grid
         virtual void initialize_grid() = 0;
 
+        /// @brief compute L2 norm 
+        /// @param v tensor
+        /// @return L2 norm of the input Tensor<1, dim> v
         double norm(const velocity_type & v){
             double r = 0;
             for (int d = 0; d<dim; ++d){
                 r += v[d]*v[d];
             }
             return std::sqrt(r);
-        }
+        };
+
+        /// @brief compute L2 norm 
+        /// @param l 
+        /// @return L2 norm of the input Point<dim> l
+        double norm(const location_type & l){
+            double r = 0;
+            for (int d = 0; d<dim; ++d){
+                r += l[d]*l[d];
+            }
+            return std::sqrt(r);
+        };
 
     };
 
@@ -88,24 +109,47 @@ namespace TestSimulators
     template<int dim>
     void TestConstantVelocity<dim>::run_test()
     {
+        /// initialize the grid and the particle_handler
         this->initialize();
 
+        /// variables storing the errors
+        double error_vel(0.), error_pos(0.);
+
+        // get particle iterator and starting data
+        auto it = this->particle_handler.begin();
+        location_type prev_location(it->get_location());
+
+        /// make sure to reset DT variable
+        REINIT_CUMULATIVE_CHRONO();
+
         unsigned int NT = this->T/this->dt;
-
-        double error;
-
         for (unsigned int i = 0; i<NT; ++i)
         {
+            /// one-step iteration update using the implemented algorithm (verlet)
+            /// also timing it
+            START_CUMULATIVE_CHRONO();
             this->update_simulation_state();
-            
-            for(auto it = this->particle_handler.begin();
-            it!= this->particle_handler.end(); ++it){
+            ADD_TIME_CUMULATIVE_CHRONO();
+
+            /// particle handler reinitialization is skipped because we don't 
+            /// need it to have the particle reassigned to the correct cell
+
+            /// computing the error:
+            {
                 velocity_type vel(this->get_velocity_from_properties(it));
-                error += this->norm(vel-velocity_ref);
-            }
+                error_vel += this->norm(vel-velocity_ref);
+                location_type loc(it->get_location());
+                error_pos += this->norm(loc - (prev_location + velocity_ref*this->dt));
+                
+                // update the previous location
+                prev_location = loc;
+            }    
         }
 
-        std::cout << "total error: " << error << std::endl;
+        /// printing the errors and the elipsed time of the simulation
+        std::cout << "total velocity error: " << error_vel << std::endl;
+        std::cout << "total position error: " << error_pos << std::endl;
+        std::cout << "streaming time:       " << DT_CUMULATIVE_CHRONO << std::endl;
     }
 
     template<int dim>
@@ -119,25 +163,26 @@ namespace TestSimulators
         std::mt19937 gen_pos;
         std::uniform_real_distribution<double> pick_position(0, 1);
         
+        /// get particle location
+
         std::vector<location_type> positions(N);
 
         auto lower_vertex(this->domain_data.get_lower_vertex());
         auto difference(this->domain_data.get_upper_vertex() - lower_vertex);
 
-        std::cout << "picking location particle\n";
         for(auto & pos : positions) {
             for(unsigned int d = 0; d<dim; ++d){
                 pos[d] = lower_vertex[d] + 
                 pick_position(gen_pos)*(difference[d]);
             }
         } 
-        // location_type position(lower_vertex + 0.5*difference);
 
-        std::cout << "inserting particle\n";
+        /// insert particle
+
         this->particle_handler.insert_particles(positions);
-        // this->particle_handler.insert_particle(position);
 
-        std::cout << "setting velocity particle\n";
+        /// assigned same constant velocity to each particle (there should be only one particle)
+
         for(auto it = this->particle_handler.begin();
             it!= this->particle_handler.end(); ++it){
                 this->set_velocity(it, velocity_ref);

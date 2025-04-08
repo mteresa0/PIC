@@ -13,7 +13,7 @@ int main() {
     dealii::Tensor<1, dim> vel;
     vel[0] = 10; vel[1] = 10.9;
 
-    TestSimulators::TestConstantVelocity<dim> sim(domain_data, 1e-8, 1e-6, vel);
+    TestSimulators::TestConstantVelocity<dim> sim(domain_data, 1e-2, 1, vel);
 
     sim.run_test();
 

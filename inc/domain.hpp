@@ -33,8 +33,9 @@ namespace Domain{
     /// @tparam BTYPE 
     template<int dim>
     class DomainData{
-    public:
         static_assert(dim==2||dim==3, "Only 2D and 3D domain are allowed");
+
+    public:
 
         using location_type = Point<dim>;
         using velocity_type = Tensor<1,dim>;
@@ -70,13 +71,29 @@ namespace Domain{
             return upper_vertex;
         }
 
+        void print_data_domain() const {
+            std::cout << "---------- DOMAIN INFO ------------\n";
+            std::cout << "DOMAIN TYPE:      " << this->domainType() << std::endl;
+            std::cout << "lower vertex:      {";
+            for(unsigned d = 0; d<dim; ++d){
+                std::cout << "   " << lower_vertex[d];
+            }
+            std::cout << "   }\n";
+            std::cout << "upper vertex:      {";
+            for(unsigned d = 0; d<dim; ++d){
+                std::cout << "   " << upper_vertex[d];
+            }
+            std::cout << "   }\n";
+            std::cout << "-----------------------------------\n";
+        }
+
     protected:
 
         // lower and upper vertex of the domain (rectangle or parallelepiped)
         const location_type lower_vertex;
         const location_type upper_vertex;
 
-
+        virtual const char* domainType() const {return "Base Class Domain";};
     };
 
     /// @brief domain with elastic collisions against the "walls"
@@ -95,6 +112,8 @@ namespace Domain{
         void out_of_boundaries(
             location_type & loc, 
             velocity_type & vel) const override;
+    private:
+        const char* domainType() const override {return "Reflective walls domain";};
     };
 
     /// @brief periodic box domain
@@ -113,6 +132,8 @@ namespace Domain{
         void out_of_boundaries(
             location_type & loc, 
             velocity_type & vel) const override;
+    private: 
+        const char* domainType() const override {return "Periodic domain";}
     };
 
 

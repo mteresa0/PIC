@@ -36,7 +36,7 @@ void PICsimulator::Simulator<dim>::run() {
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
      
     std::cout << "---------- starting simulation ----------" << std::endl;
-    tic();
+    TIC();
     REINIT_CUMULATIVE_CHRONO();
 
     for(unsigned int i = 0; i<NT; ++i){
@@ -75,7 +75,7 @@ void PICsimulator::Simulator<dim>::run() {
         print_data_to_files(i);
     }
 
-    toc();
+    TOC();
     std::cout << "Simulation completed in " << DT      << " seconds" << std::endl; 
     std::cout << "sort particles time:    " << DT_CUMULATIVE_CHRONO << " seconds" << std::endl;
 
@@ -98,6 +98,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
     triangulation.refine_global(4);
 
     std::cout << "Grid created" << std::endl;
+    domain_data.print_data_domain();
 
     std::ofstream out("outputs/grid.vtk");
     dealii::GridOut     gridout;
