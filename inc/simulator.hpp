@@ -20,22 +20,23 @@
 #include "domain.hpp"
 #include <chrono>
 
-static std::chrono::time_point<std::chrono::high_resolution_clock> start_chrono, starting_time_sorting;
-static double DT, DT_sort;
+static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME;
+static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME_CUMULATIVE_CHRONO;
+static double DT, DT_CUMULATIVE_CHRONO;
 
-#define tic() start_chrono = std::chrono::high_resolution_clock::now();
-#define toc()                                                               \
-{                                                                           \
-    auto now = std::chrono::high_resolution_clock::now();                   \
-    std::chrono::duration<double> diff = now - start_chrono;                \
-    DT = diff.count();                                                      \
+#define TIC() STARTING_TIME = std::chrono::high_resolution_clock::now();
+#define TOC(){                                                                  \
+    auto now = std::chrono::high_resolution_clock::now();                       \
+    std::chrono::duration<double> diff = now - STARTING_TIME;                   \
+    DT = diff.count();                                                          \
 }
-#define start_chrono_sort() {starting_time_sorting = std::chrono::high_resolution_clock::now();}
-#define restart_DT_sort() {DT_sort = 0;}
-#define add_time() {                                                        \
-    auto now = std::chrono::high_resolution_clock::now();                   \
-    std::chrono::duration<double> diff = now - starting_time_sorting;       \
-    DT_sort += diff.count();                                                \
+
+#define START_CUMULATIVE_CHRONO() {STARTING_TIME_CUMULATIVE_CHRONO = std::chrono::high_resolution_clock::now();}
+#define REINIT_CUMULATIVE_CHRONO() {DT_CUMULATIVE_CHRONO = 0;}
+#define ADD_TIME_CUMULATIVE_CHRONO() {                                          \
+    auto now = std::chrono::high_resolution_clock::now();                       \
+    std::chrono::duration<double> diff = now - STARTING_TIME_CUMULATIVE_CHRONO; \
+    DT_CUMULATIVE_CHRONO += diff.count();                                       \
 }
 
 

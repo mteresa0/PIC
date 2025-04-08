@@ -37,7 +37,7 @@ void PICsimulator::Simulator<dim>::run() {
      
     std::cout << "---------- starting simulation ----------" << std::endl;
     tic();
-    restart_DT_sort();
+    REINIT_CUMULATIVE_CHRONO();
 
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
@@ -67,9 +67,9 @@ void PICsimulator::Simulator<dim>::run() {
         total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
 
         // sort particles into cells
-        start_chrono_sort();
+        START_CUMULATIVE_CHRONO();
         particle_handler.sort_particles_into_subdomains_and_cells();
-        add_time();
+        ADD_TIME_CUMULATIVE_CHRONO();
 
         // print data to files
         print_data_to_files(i);
@@ -77,7 +77,7 @@ void PICsimulator::Simulator<dim>::run() {
 
     toc();
     std::cout << "Simulation completed in " << DT      << " seconds" << std::endl; 
-    std::cout << "sort particles time:    " << DT_sort << " seconds" << std::endl;
+    std::cout << "sort particles time:    " << DT_CUMULATIVE_CHRONO << " seconds" << std::endl;
 
     // print kinetic energies into csv
     std::ofstream output("outputs/total_kinetic_energy.csv");
