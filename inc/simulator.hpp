@@ -105,6 +105,9 @@ namespace PICsimulator{
         /// @brief time iteration
         void update_simulation_state();
 
+        /// @brief evaluate acceleration (TODO)
+        virtual location_type evaluate_acceleration();
+
         //// PRINTING FUNCTIONS
 
         /// @brief prints at a given timestep i the properties of each particle

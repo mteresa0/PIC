@@ -202,21 +202,29 @@ void PICsimulator::Simulator<dim>::update_simulation_state()
 }
 
 template <int dim>
+typename PICsimulator::Simulator<dim>::location_type
+ PICsimulator::Simulator<dim>::evaluate_acceleration()
+{
+    return location_type();
+}
+
+template <int dim>
 void PICsimulator::Simulator<dim>::update_position()
 {
-    for (const auto & cell: dof_handler.active_cell_iterators())
-    {
-        // compute acceleration
-        Tensor<1, dim> acceleration;
+    // initialize acceleration
+    location_type acceleration;
 
-        const auto pic_cell = particle_handler.particles_in_cell(cell);
-        for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
+    {
+        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
             Point<dim> position(it->get_location());
             const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
+
+            acceleration = this->evaluate_acceleration();
             
             // update position
-            it->set_location(position + dt*velocity + 1/2*dt*dt*acceleration);
+            it->set_location(position + dt*velocity + 0.5*dt*dt*acceleration);
+            set_velocity(it, velocity + 0.5 *dt * acceleration);
         }
     }
 }
@@ -224,19 +232,19 @@ void PICsimulator::Simulator<dim>::update_position()
 template <int dim>
 void PICsimulator::Simulator<dim>::update_velocity()
 {
-    for (const auto & cell: dof_handler.active_cell_iterators())
-    {
-        // compute acceleration
-        Tensor<1, dim> new_acceleration;
-        Tensor<1, dim> old_acceleration;
 
-        const auto pic_cell = particle_handler.particles_in_cell(cell);
-        for (auto it = pic_cell.begin(); it!=pic_cell.end(); ++it)
+    // initialize acceleration
+    location_type new_acceleration;
+
+    {
+        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
         {
             const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
-            
+
+            new_acceleration = this->evaluate_acceleration();
+
             // update position
-            set_velocity(it, velocity + 1/2*dt*(new_acceleration + old_acceleration));
+            set_velocity(it, velocity + 0.5*dt*new_acceleration);
         }
     }
 }
