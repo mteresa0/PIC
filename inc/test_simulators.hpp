@@ -20,7 +20,7 @@ namespace TestSimulators
 
     /// @brief Test simulator base class. 
     /// @brief Test different scenario described in the derived classes.
-    /// @tparam dim 
+    /// @tparam dim dimension of the domain
     template<int dim>
     class TestSimulator : public PICsimulator::Simulator<dim>
     {
@@ -28,6 +28,10 @@ namespace TestSimulators
         using typename PICsimulator::Simulator<dim>::location_type;
         using typename PICsimulator::Simulator<dim>::velocity_type;
 
+        /// @brief Constructor
+        /// @param domain_data_ object describing the domain
+        /// @param dt_ timestep time
+        /// @param T_ total simulation time
         TestSimulator(
             const Domain::DomainData<dim> &domain_data_, 
             const double &dt_,
@@ -35,7 +39,7 @@ namespace TestSimulators
             PICsimulator::Simulator<dim>(domain_data_, dt_, T_) {};
         
         /// @brief run test
-        virtual void run_test() = 0;
+        void run_test();
 
     protected:
         /// @brief initialize grid and particle handler
@@ -47,8 +51,22 @@ namespace TestSimulators
         /// @brief initialize grid
         virtual void initialize_grid() = 0;
 
+        /// @brief updates position and velocity errors and 
+        /// updates true location and position
+        /// @param particle particle iterator
+        /// @param loc_ref current true location
+        /// @param vel_ref current true velocity
+        /// @param loc_error error location
+        /// @param vel_error error velocity
+        virtual void compute_errors(
+            typename Particles::ParticleIterator<dim> &particle,
+            location_type & loc_ref, 
+            velocity_type & vel_ref, 
+            double & loc_error, 
+            double & vel_error) = 0;
+
         /// @brief compute L2 norm 
-        /// @param v tensor
+        /// @param v velocity_type vector (dealii::Tensor<1, dim>)
         /// @return L2 norm of the input Tensor<1, dim> v
         double norm(const velocity_type & v){
             double r = 0;
@@ -59,7 +77,7 @@ namespace TestSimulators
         };
 
         /// @brief compute L2 norm 
-        /// @param l 
+        /// @param l location_type vector (dealii::Point<dim>)
         /// @return L2 norm of the input Point<dim> l
         double norm(const location_type & l){
             double r = 0;
@@ -71,6 +89,8 @@ namespace TestSimulators
 
     };
 
+    /// @brief Testing the linear motion of a particle
+    /// @tparam dim dimension of the domain
     template<int dim>
     class TestConstantVelocity : public TestSimulator<dim>
     {
@@ -78,6 +98,11 @@ namespace TestSimulators
         using typename TestSimulator<dim>::location_type;
         using typename TestSimulator<dim>::velocity_type;
 
+        /// @brief Constructor of TestConstantVelocity
+        /// @param domain_data_ object containing domain data
+        /// @param dt_ timestep time
+        /// @param T_ total simulation time
+        /// @param vel_ particle velocity
         TestConstantVelocity(
             const Domain::DomainData<dim> &domain_data_, 
             const double &dt_,
@@ -87,15 +112,31 @@ namespace TestSimulators
             velocity_ref(vel_) 
             {};
 
-        void run_test() override;
-    
     private:
+        /// @brief initialize one particle randomly chosing the location 
+        /// in the domain and setting the initial velocity as the given one
         void initialize_particles() override;
+
+        /// @brief initialize grid with the standard `make_grid`
         void initialize_grid() override{
             this->make_grid(); return; 
         };
 
-        const velocity_type velocity_ref;
+        /// @brief updates position and velocity errors and 
+        /// updates true location and position
+        /// @param particle particle iterator
+        /// @param loc_ref current true location
+        /// @param vel_ref current true velocity
+        /// @param loc_error error location
+        /// @param vel_error error velocity
+        void compute_errors(
+            typename Particles::ParticleIterator<dim> &particle,
+            location_type & loc_ref, 
+            velocity_type & vel_ref, 
+            double & loc_error, 
+            double & vel_error) override;
+
+        const velocity_type velocity_ref; /// velocity of the particle
     };
 
     template<int dim>
@@ -105,6 +146,12 @@ namespace TestSimulators
         using typename TestSimulator<dim>::location_type;
         using typename TestSimulator<dim>::velocity_type;
 
+        /// @brief Constructor of TestConstantAcceleration
+        /// @param domain_data_ object describing the domain
+        /// @param dt_ timestep time
+        /// @param T_ total simulation time
+        /// @param acc_ given constant acceleration
+        /// @param i_vel_ initial velocity of the particle
         TestConstantAcceleration(
             const Domain::DomainData<dim> &domain_data_, 
             const double &dt_,
@@ -115,23 +162,48 @@ namespace TestSimulators
             acceleration_ref(acc_),
             initial_velocity(i_vel_)
             {};
-
-        void run_test() override;
     
     private:
+        /// @brief initialize one particle randomly chosing the location 
+        /// in the domain and setting the initial velocity as the given one
         void initialize_particles() override;
-        void initialize_grid() override {
-            this->make_grid();
-            return;
+
+        /// @brief initialize grid with the standard `make_grid`
+        void initialize_grid() override{
+            this->make_grid(); return; 
         };
 
+        /// @brief updates position and velocity errors and 
+        /// updates true location and position
+        /// @param particle particle iterator
+        /// @param loc_ref current true location
+        /// @param vel_ref current true velocity
+        /// @param loc_error error location
+        /// @param vel_error error velocity
+        void compute_errors(
+            typename Particles::ParticleIterator<dim> &particle,
+            location_type & loc_ref, 
+            velocity_type & vel_ref, 
+            double & loc_error, 
+            double & vel_error) override;
+
+        /// @brief override evaluate_acceleration with returning constant acceleration
+        /// @return constant acceleration `acceleration_ref`
         location_type evaluate_acceleration() override{
             return acceleration_ref;
         };
 
-        const location_type acceleration_ref;
-        const velocity_type initial_velocity;
+        const location_type acceleration_ref; /// given constant acceleration
+        const velocity_type initial_velocity; /// initial velocity of the particle
     };
+
+    /****************************
+            DEFINITIONS   
+    ****************************/
+
+    /*
+     * TestSimulator Definitions
+     */
 
     template<int dim>
     void TestSimulator<dim>::initialize()
@@ -152,12 +224,8 @@ namespace TestSimulators
         return;
     }
 
-    /****************************
-            DEFINITIONS   
-    ****************************/
-
     template<int dim>
-    void TestConstantVelocity<dim>::run_test()
+    void TestSimulator<dim>::run_test()
     {
         /// initialize the grid and the particle_handler
         this->initialize();
@@ -167,7 +235,8 @@ namespace TestSimulators
 
         // get particle iterator and starting data
         auto it = this->particle_handler.begin();
-        location_type prev_location(it->get_location());
+        location_type ref_location(it->get_location());
+        velocity_type ref_velocity(this->get_velocity_from_properties(it));
 
         /// make sure to reset DT variable
         REINIT_CUMULATIVE_CHRONO();
@@ -185,25 +254,21 @@ namespace TestSimulators
             /// need it to have the particle reassigned to the correct cell
 
             /// computing the error:
-            {
-                velocity_type vel(this->get_velocity_from_properties(it));
-                error_vel += this->norm(vel-velocity_ref);
-                location_type loc(it->get_location());
-                error_pos += this->norm(loc - (prev_location + velocity_ref*this->dt));
-
-                // update the previous location
-                prev_location = loc;
-            }   
+            compute_errors(it, ref_location, ref_velocity, error_pos, error_vel);
         }
 
         error_vel /= NT;
         error_pos /= NT;
 
         /// printing the errors and the elipsed time of the simulation
-        std::cout << "total velocity error: " << error_vel << std::endl;
+        std::cout << "\ntotal velocity error: " << error_vel << std::endl;
         std::cout << "total position error: " << error_pos << std::endl;
         std::cout << "streaming time:       " << DT_CUMULATIVE_CHRONO << std::endl;
     }
+
+    /*
+    * Constant Velocity Test Definitions
+    */
 
     template<int dim>
     void TestConstantVelocity<dim>::initialize_particles()
@@ -216,7 +281,7 @@ namespace TestSimulators
         std::mt19937 gen_pos;
         std::uniform_real_distribution<double> pick_position(0, 1);
         
-        /// get particle location
+        // get particle location
 
         std::vector<location_type> positions(N);
 
@@ -230,11 +295,11 @@ namespace TestSimulators
             }
         } 
 
-        /// insert particle
+        // insert particle
 
         this->particle_handler.insert_particles(positions);
 
-        /// assigned same constant velocity to each particle (there should be only one particle)
+        // assigned same constant velocity to each particle (there should be only one particle)
 
         for(auto it = this->particle_handler.begin();
             it!= this->particle_handler.end(); ++it){
@@ -244,78 +309,36 @@ namespace TestSimulators
         return;
     }
 
-    template <int dim>
-    void TestConstantAcceleration<dim>::run_test()
+    template<int dim>
+    inline void TestConstantVelocity<dim>::compute_errors(
+        typename Particles::ParticleIterator<dim> &particle,
+        location_type & loc_ref, 
+        velocity_type & , 
+        double & loc_error, 
+        double & vel_error)
     {
-        /// initialize the grid and the particle_handler
-        this->initialize();
+        // get new position from simulation
+        location_type loc = (particle->get_location());
 
-        /// variables storing the errors
-        double error_vel(0.), error_pos(0.);
+        // update location from theory
+        loc_ref = loc_ref + 
+                velocity_ref * this->dt;
 
-        // get particle iterator and starting data
-        auto it = this->particle_handler.begin();
-        location_type loc_ref(it->get_location());
-        velocity_type vel_ref(initial_velocity);
-        location_type loc;
-        velocity_type vel;
+        // compute position error
+        loc_error += this->norm(loc - loc_ref);
 
-        /// make sure to reset DT variable
-        REINIT_CUMULATIVE_CHRONO();
+        // get new velocity from simulation
+        velocity_type vel = (this->get_velocity_from_properties(particle));
 
-        unsigned int NT = this->T/this->dt;
-        for (unsigned int i = 0; i<NT; ++i)
-        {
-            /// one-step iteration update using the implemented algorithm (verlet)
-            /// also timing it
-            START_CUMULATIVE_CHRONO();
-            this->update_simulation_state();
-            ADD_TIME_CUMULATIVE_CHRONO();
+        // compute velocity error
+        vel_error += this->norm(vel - this->velocity_ref);
+    }
 
-            /// particle handler reinitialization is skipped because we don't 
-            /// need it to have the particle reassigned to the correct cell
 
-            /// computing the error:
-            {
-                // get new position from simulation
-                loc = (it->get_location());
 
-                // update location from theory
-                loc_ref = loc_ref + 
-                        vel_ref * this->dt + 
-                        0.5*this->acceleration_ref * this->dt * this->dt;
-
-                // compute position error
-                error_pos += this->norm(loc - loc_ref);
-
-                // get new velocity from simulation
-                vel = (this->get_velocity_from_properties(it));
-
-                // compute new velocity from theory and update
-                vel_ref = (vel_ref + acceleration_ref * this->dt);
-
-                // compute velocity error
-                error_vel += this->norm(vel - vel_ref);
-
-                // std::cout << "\nit: " << i << "  vel_error    pos_error" << 
-                // std::endl  << "          " << this->norm(vel - vel_ref) << 
-                // "        " << this->norm(loc - loc_ref)  << std::endl;
-
-                // std::cout << "sim location: " << loc << std::endl;
-                // std::cout << "ref location: " << loc_ref << std::endl;
-                // std::cout << "sim velocity: " << vel << std::endl;
-                // std::cout << "ref velocity: " << vel_ref << std::endl;
-            }    
-        }
-
-        error_vel /= NT;
-        error_pos /= NT;
-
-        /// printing the errors and the elipsed time of the simulation
-        std::cout << "\ntotal velocity error: " << error_vel << std::endl;
-        std::cout << "total position error: " << error_pos << std::endl;
-        std::cout << "streaming time:       " << DT_CUMULATIVE_CHRONO << std::endl;
-    };
+    /*
+    * Constant Acceleration Test Definitions
+    */
 
     template <int dim>
     void TestConstantAcceleration<dim>::initialize_particles()
@@ -328,7 +351,7 @@ namespace TestSimulators
         std::mt19937 gen_pos;
         std::uniform_real_distribution<double> pick_position(0, 1);
         
-        /// get particle location
+        // get particle location
 
         std::vector<location_type> positions(N);
 
@@ -342,11 +365,11 @@ namespace TestSimulators
             }
         } 
 
-        /// insert particle
+        // insert particle
 
         this->particle_handler.insert_particles(positions);
 
-        /// assigned same constant velocity to each particle (there should be only one particle)
+        // assigned same constant velocity to each particle (there should be only one particle)
 
         for(auto it = this->particle_handler.begin();
             it!= this->particle_handler.end(); ++it){
@@ -354,6 +377,35 @@ namespace TestSimulators
             }
         
         return;
+    }
+
+    template<int dim>
+    inline void TestConstantAcceleration<dim>::compute_errors(
+        typename Particles::ParticleIterator<dim> &particle,
+        location_type & loc_ref, 
+        velocity_type & vel_ref, 
+        double & loc_error, 
+        double & vel_error)
+    {
+        // get new position from simulation
+        location_type loc = (particle->get_location());
+
+        // update location from theory
+        loc_ref = loc_ref + 
+                vel_ref * this->dt + 
+                0.5*this->acceleration_ref * this->dt * this->dt;
+
+        // compute position error
+        loc_error += this->norm(loc - loc_ref);
+
+        // get new velocity from simulation
+        velocity_type vel = (this->get_velocity_from_properties(particle));
+
+        // compute new velocity from theory and update
+        vel_ref = (vel_ref + this->acceleration_ref * this->dt);
+
+        // compute velocity error
+        vel_error += this->norm(vel - vel_ref);
     }
 
 } // namespace TestSimulators
