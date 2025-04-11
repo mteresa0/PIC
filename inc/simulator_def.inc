@@ -1,3 +1,12 @@
+/**
+ * @file simulator_def.inc
+ * @author Maria Teresa Cazzola 
+ * @brief definitions of class simulator methods
+ * @date 2025-04-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #include "simulator.hpp"
 
 template<int dim>

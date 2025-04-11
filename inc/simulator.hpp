@@ -1,3 +1,12 @@
+/**
+ * @file simulator.hpp
+ * @author Maria Teresa Cazzola
+ * @brief declarations of class simulator
+ * @date 2025-04-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef SIMULATOR
 #define SIMULATOR
 

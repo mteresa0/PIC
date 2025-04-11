@@ -1,3 +1,12 @@
+/**
+ * @file test_simulators.hpp
+ * @author Maria Teresa Cazzola
+ * @brief declaration and definition of tests cases for the PIC simulator
+ * @date 2025-04-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef TEST_SIMULATORS_HPP
 #define TEST_SIMULATORS_HPP
 
@@ -338,7 +347,7 @@ namespace TestSimulators
         this->particle_handler.insert_particles(positions);
 
         /// assigned same constant velocity to each particle (there should be only one particle)
-        
+
         for(auto it = this->particle_handler.begin();
             it!= this->particle_handler.end(); ++it){
                 this->set_velocity(it, this->initial_velocity);

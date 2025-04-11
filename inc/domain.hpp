@@ -1,3 +1,12 @@
+/**
+ * @file domain.hpp
+ * @author Maria Teresa Cazzola
+ * @brief Declaration and definition of structures storing domain properties
+ * @date 2025-04-11
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef DOMAIN_HPP
 #define DOMAIN_HPP
 
@@ -30,7 +39,6 @@ namespace Domain{
     /// @brief store the vertex of the domain (shaped like a rectangle (2D) or a parallelepiped (3D)) 
     /// and the type of boundary conditions 
     /// @tparam dim 
-    /// @tparam BTYPE 
     template<int dim>
     class DomainData{
         static_assert(dim==2||dim==3, "Only 2D and 3D domain are allowed");
@@ -45,16 +53,15 @@ namespace Domain{
         /// @param upper_v_ 
         DomainData(
             const location_type & lower_v_ = UnitSquare::get_lower_vertex<dim>(), 
-            const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()): 
-            lower_vertex(lower_v_), upper_vertex(upper_v_) {
-                std::cout << "DomainData constructor" << std::endl;
-            };
+            const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()):  
+            lower_vertex(lower_v_), upper_vertex(upper_v_) {};
         
+        /// descructor
         virtual ~DomainData() = default;
 
         /// @brief updates location and velocity of a particle when it leaves the domain
-        /// @param loc 
-        /// @param vel 
+        /// @param loc location of the particle (to be updated)
+        /// @param vel velocity of the particle (to be updated)
         virtual void out_of_boundaries (
             location_type & loc, 
             velocity_type & vel) const;
@@ -71,6 +78,7 @@ namespace Domain{
             return upper_vertex;
         }
 
+        /// @brief prints domain informations
         void print_data_domain() const {
             std::cout << "---------- DOMAIN INFO ------------\n";
             std::cout << "DOMAIN TYPE:      " << this->domainType() << std::endl;
@@ -90,10 +98,10 @@ namespace Domain{
     protected:
 
         // lower and upper vertex of the domain (rectangle or parallelepiped)
-        const location_type lower_vertex;
-        const location_type upper_vertex;
+        const location_type lower_vertex; /// lower vertex point
+        const location_type upper_vertex; /// upper vertex point
 
-        virtual const char* domainType() const {return "Base Class Domain";};
+        virtual const char* domainType() const {return "Base Class Domain";}; /// domain type string
     };
 
     /// @brief domain with elastic collisions against the "walls"
