@@ -37,9 +37,32 @@ namespace TestSimulators
             const double &dt_,
             const double &T_):
             PICsimulator::Simulator<dim>(domain_data_, dt_, T_) {};
+
+        /// @brief Destructor
+        ~TestSimulator() = default;
         
         /// @brief run test
         void run_test();
+
+        /// @brief print errors to file
+        /// @param filename name of the file
+        /// @param overwrite file
+        void print_errors_to_file(
+            const std::string &filename, 
+            const bool &overwrite = false)
+        {
+            std::ofstream file;
+            if (overwrite) {
+                file.open(filename);
+                file << "location_error velocity_error dt\n";
+            } 
+            else
+                file.open(filename, std::ios::app);
+
+            file << this->location_error << " " << this->velocity_error << " " 
+                << this->dt << "\n";
+            file.close();
+        };
 
     protected:
         /// @brief initialize grid and particle handler
@@ -87,6 +110,8 @@ namespace TestSimulators
             return std::sqrt(r);
         };
 
+        double location_error = 0; /// location error
+        double velocity_error = 0; /// velocity error
     };
 
     /// @brief Testing the linear motion of a particle
@@ -139,6 +164,8 @@ namespace TestSimulators
         const velocity_type velocity_ref; /// velocity of the particle
     };
 
+    /// @brief Testing uniformly accelerated motion of a particle
+    /// @tparam dim spatial dimension of the domain
     template<int dim>
     class TestConstantAcceleration : public TestSimulator<dim>
     {
@@ -151,18 +178,42 @@ namespace TestSimulators
         /// @param dt_ timestep time
         /// @param T_ total simulation time
         /// @param acc_ given constant acceleration
-        /// @param i_vel_ initial velocity of the particle
+        /// @param vel_in_ initial velocity of the particle
         TestConstantAcceleration(
             const Domain::DomainData<dim> &domain_data_, 
             const double &dt_,
             const double &T_, 
             const location_type &acc_,
-            const velocity_type &i_vel_):
+            const velocity_type &vel_in_):
             TestSimulator<dim>(domain_data_, dt_, T_), 
             acceleration_ref(acc_),
-            initial_velocity(i_vel_)
+            initial_velocity(vel_in_)
             {};
-    
+    protected:
+        /// @brief updates position and velocity errors and 
+        /// updates true location and position
+        /// @param particle particle iterator
+        /// @param loc_ref current true location
+        /// @param vel_ref current true velocity
+        /// @param loc_error error location
+        /// @param vel_error error velocity
+        void compute_errors(
+            typename Particles::ParticleIterator<dim> &particle,
+            location_type & loc_ref, 
+            velocity_type & vel_ref, 
+            double & loc_error, 
+            double & vel_error) override;
+
+        
+        /// @brief override evaluate_acceleration with returning constant acceleration
+        /// @return constant acceleration `acceleration_ref`
+        location_type evaluate_acceleration() override{
+            return acceleration_ref;
+        };
+
+        const location_type acceleration_ref; /// given constant acceleration
+        const velocity_type initial_velocity; /// initial velocity of the particle
+
     private:
         /// @brief initialize one particle randomly chosing the location 
         /// in the domain and setting the initial velocity as the given one
@@ -173,6 +224,37 @@ namespace TestSimulators
             this->make_grid(); return; 
         };
 
+    };
+
+
+    /// @brief Testing 
+    /// @tparam dim spatial dimension of the domain
+    template<int dim>
+    class TestLinearAcceleration : public TestConstantAcceleration<dim>
+    {
+    public:
+        using typename TestConstantAcceleration<dim>::location_type;
+        using typename TestConstantAcceleration<dim>::velocity_type;
+
+        /// @brief Constructor of TestConstantAcceleration
+        /// @param domain_data_ object describing the domain
+        /// @param dt_ timestep time
+        /// @param T_ total simulation time
+        /// @param acc_in_ initial acceleration
+        /// @param vel_in__ initial velocity of the particle
+        /// @param dacc_ acceleration slope
+        TestLinearAcceleration(
+            const Domain::DomainData<dim> &domain_data_, 
+            const double &dt_,
+            const double &T_, 
+            const location_type &acc_in_,
+            const location_type &dacc_,
+            const velocity_type &vel_in__):
+            TestConstantAcceleration<dim>(domain_data_, dt_, T_, acc_in_, vel_in__), 
+            slope_acc(dacc_)
+            {};
+    
+    private:
         /// @brief updates position and velocity errors and 
         /// updates true location and position
         /// @param particle particle iterator
@@ -190,11 +272,12 @@ namespace TestSimulators
         /// @brief override evaluate_acceleration with returning constant acceleration
         /// @return constant acceleration `acceleration_ref`
         location_type evaluate_acceleration() override{
-            return acceleration_ref;
+            std::cout << this->current_time * slope_acc + this->acceleration_ref << std::endl;
+            return this->current_time * slope_acc + this->acceleration_ref;
         };
 
-        const location_type acceleration_ref; /// given constant acceleration
-        const velocity_type initial_velocity; /// initial velocity of the particle
+        const location_type slope_acc;
+        double current_time = 0;               /// current time of the test simulation
     };
 
     /****************************
@@ -220,6 +303,12 @@ namespace TestSimulators
         initialize_grid();
         initialize_particles();
 
+        std::cout << "\n------- TEST SIMULATOR INITIALIZED -------";
+        std::cout << "\ndt: " << this->dt << "\nT: " << this->T;
+        std::cout << "\n# time steps: " << this->T/this->dt;
+        std::cout << "\n# cells: " << this->triangulation.n_active_cells();
+        std::cout << "\n# particles: " << this->particle_handler.n_global_particles() << std::endl;
+        std::cout << "------------------------------------------\n";
         this->initialized = true;
         return;
     }
@@ -257,13 +346,16 @@ namespace TestSimulators
             compute_errors(it, ref_location, ref_velocity, error_pos, error_vel);
         }
 
-        error_vel /= NT;
-        error_pos /= NT;
+        error_vel *= this->dt;
+        error_pos *= this->dt;
 
         /// printing the errors and the elipsed time of the simulation
         std::cout << "\ntotal velocity error: " << error_vel << std::endl;
         std::cout << "total position error: " << error_pos << std::endl;
-        std::cout << "streaming time:       " << DT_CUMULATIVE_CHRONO << std::endl;
+        std::cout << "streaming time:       \n\n" << DT_CUMULATIVE_CHRONO << std::endl;
+    
+        location_error = error_pos;
+        velocity_error = error_vel;
     }
 
     /*
@@ -408,7 +500,56 @@ namespace TestSimulators
         vel_error += this->norm(vel - vel_ref);
     }
 
-} // namespace TestSimulators
+    template <int dim>
+    inline void TestLinearAcceleration<dim>::compute_errors(
+        typename Particles::ParticleIterator<dim> &particle, 
+        location_type &loc_ref, 
+        velocity_type &vel_ref, 
+        double &loc_error, 
+        double &vel_error)
+    {
+        location_type current_acceleration = this->acceleration_ref + 
+                                            current_time * slope_acc;
 
+        // get new position from simulation
+        location_type loc = (particle->get_location());
+
+        // get new velocity from simulation
+        velocity_type vel = (this->get_velocity_from_properties(particle));
+
+        // update location from theory
+        loc_ref = loc_ref + 
+                vel_ref * this->dt + 
+                0.5*current_acceleration * this->dt * this->dt +
+                1./6. * slope_acc * this->dt * this->dt * this->dt;
+
+        // compute position error
+        loc_error += this->norm(loc - loc_ref);
+
+        // compute new velocity from theory and update
+        vel_ref = (vel_ref + 
+                current_acceleration * this->dt + 
+                0.5 * this->slope_acc * this->dt * this->dt
+                );
+
+        // compute velocity error
+        vel_error += this->norm(vel - vel_ref);
+
+        // update current time
+        current_time += this->dt;
+
+        // std::cout << "\nit: " << current_time << "  vel_error    pos_error" << 
+        // std::endl  << "          " << this->norm(vel - vel_ref) << 
+        // "        " << this->norm(loc - loc_ref)  << std::endl;
+
+        // std::cout << "sim location: " << loc << std::endl;
+        // std::cout << "ref location: " << loc_ref << std::endl;
+        // std::cout << "sim velocity: " << vel  << std::endl;
+        // std::cout << "ref velocity: " << vel_ref << std::endl;
+        // std::cout << "acceleration: " << current_acceleration << std::endl;
+
+    }
+
+} // namespace TestSimulators
 
 #endif // TEST_SIMULATORS_HPP
