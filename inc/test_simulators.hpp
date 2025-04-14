@@ -64,6 +64,13 @@ namespace TestSimulators
             file.close();
         };
 
+        double get_loc_error() const {
+            return location_error;
+        };
+        double get_vel_error() const {
+            return velocity_error;
+        };
+
     protected:
         /// @brief initialize grid and particle handler
         void initialize() override;
@@ -280,7 +287,6 @@ namespace TestSimulators
                 ++count;
                 current_time += this->dt;
             }
-            std::cout << this->current_time * slope_acc + this->acceleration_ref;
             return this->current_time * slope_acc + this->acceleration_ref;
         };
 
@@ -325,10 +331,10 @@ namespace TestSimulators
     template<int dim>
     void TestSimulator<dim>::run_test()
     {
-        /// initialize the grid and the particle_handler
+        // initialize the grid and the particle_handler
         this->initialize();
 
-        /// variables storing the errors
+        // variables storing the errors
         double error_vel(0.), error_pos(0.);
 
         // get particle iterator and starting data
@@ -336,29 +342,29 @@ namespace TestSimulators
         location_type ref_location(it->get_location());
         velocity_type ref_velocity(this->get_velocity_from_properties(it));
 
-        /// make sure to reset DT variable
+        // make sure to reset DT variable
         REINIT_CUMULATIVE_CHRONO();
 
         unsigned int NT = this->T/this->dt;
         for (unsigned int i = 0; i<NT; ++i)
         {
-            /// one-step iteration update using the implemented algorithm (verlet)
-            /// also timing it
+            // one-step iteration update using the implemented algorithm (verlet)
+            // also timing it
             START_CUMULATIVE_CHRONO();
             this->update_simulation_state();
             ADD_TIME_CUMULATIVE_CHRONO();
 
-            /// particle handler reinitialization is skipped because we don't 
-            /// need it to have the particle reassigned to the correct cell
+            // particle handler reinitialization is skipped because we don't 
+            // need it to have the particle reassigned to the correct cell
 
-            /// computing the error:
+            // computing the error:
             compute_errors(it, ref_location, ref_velocity, error_pos, error_vel);
         }
 
         error_vel *= this->dt;
         error_pos *= this->dt;
 
-        /// printing the errors and the elipsed time of the simulation
+        // printing the errors and the elipsed time of the simulation
         std::cout << "\ntotal velocity error: " << error_vel << std::endl;
         std::cout << "total position error: " << error_pos << std::endl;
         std::cout << "streaming time:       " << DT_CUMULATIVE_CHRONO << "\n\n"<< std::endl;
@@ -518,7 +524,7 @@ namespace TestSimulators
         double &vel_error)
     {
         location_type current_acceleration = this->acceleration_ref + 
-                                            current_time * slope_acc;
+                                            (current_time - this->dt) * slope_acc;
 
         // get new position from simulation
         location_type loc = (particle->get_location());
