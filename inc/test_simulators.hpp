@@ -272,10 +272,19 @@ namespace TestSimulators
         /// @brief override evaluate_acceleration with returning constant acceleration
         /// @return constant acceleration `acceleration_ref`
         location_type evaluate_acceleration() override{
-            std::cout << this->current_time * slope_acc + this->acceleration_ref << std::endl;
+            // first call in position update (still using acc^n)
+            if(count%2==0) {
+                ++count;
+            } else {
+            // second call in velocity_update when acc^{n+1} is needed
+                ++count;
+                current_time += this->dt;
+            }
+            std::cout << this->current_time * slope_acc + this->acceleration_ref;
             return this->current_time * slope_acc + this->acceleration_ref;
         };
 
+        unsigned int count = 0;
         const location_type slope_acc;
         double current_time = 0;               /// current time of the test simulation
     };
@@ -352,7 +361,7 @@ namespace TestSimulators
         /// printing the errors and the elipsed time of the simulation
         std::cout << "\ntotal velocity error: " << error_vel << std::endl;
         std::cout << "total position error: " << error_pos << std::endl;
-        std::cout << "streaming time:       \n\n" << DT_CUMULATIVE_CHRONO << std::endl;
+        std::cout << "streaming time:       " << DT_CUMULATIVE_CHRONO << "\n\n"<< std::endl;
     
         location_error = error_pos;
         velocity_error = error_vel;
@@ -534,9 +543,6 @@ namespace TestSimulators
 
         // compute velocity error
         vel_error += this->norm(vel - vel_ref);
-
-        // update current time
-        current_time += this->dt;
 
         // std::cout << "\nit: " << current_time << "  vel_error    pos_error" << 
         // std::endl  << "          " << this->norm(vel - vel_ref) << 
