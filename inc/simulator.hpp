@@ -176,6 +176,6 @@ namespace PICsimulator{
 
 };
 
-#include "simulator_def.inc"
+#include "simulator.tpp"
 
 #endif // SIMULATOR
