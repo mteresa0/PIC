@@ -11,9 +11,9 @@
 
 template<int dim>
 PICsimulator::Simulator<dim>::Simulator(
-    const Domain::DomainData<dim> &domain_data_, 
     const double &dt_,
-    const double &T_):
+    const double &T_,
+    const Domain::DomainData<dim> &domain_data_):
 mapping(1), 
 dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
@@ -106,7 +106,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
 
     triangulation.refine_global(4);
 
-    std::cout << "Grid created" << std::endl;
+    std::cout << " * Grid created * " << std::endl;
     domain_data.print_data_domain();
 
     std::ofstream out("outputs/grid.vtk");

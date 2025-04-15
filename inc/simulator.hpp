@@ -76,9 +76,9 @@ namespace PICsimulator{
         /// @brief constructor
         /// @param domain_data_ 
         Simulator(
-            const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>(),
             const double &dt_ = 1e-8,
-            const double &T_ = 1e-5);
+            const double &T_ = 1e-5,
+            const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>());
         
         /// @brief run simulation
         void run();   
