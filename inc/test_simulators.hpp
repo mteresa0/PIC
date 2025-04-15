@@ -32,7 +32,6 @@ namespace PICsimulator::TestSimulators
         }
 
         /// @brief constant velocity function
-        /// @param t time
         /// @return velocity vector
         Point<2> get_vel(const double &)
         {
@@ -40,7 +39,6 @@ namespace PICsimulator::TestSimulators
         }
 
         /// @brief constant acceleration function
-        /// @param t time
         /// @return acceleration vector
         Point<2> get_acc(const double &)
         {
@@ -50,12 +48,15 @@ namespace PICsimulator::TestSimulators
     }
 
     namespace PeriodicMotion2D {
+        /// @brief periodic motion function
+        /// @param t time
+        /// @return location vector
         Point<2> get_loc(const double &t)
         {
             return Point<2>(std::cos(t), std::sin(t));
         }
 
-        /// @brief constant velocity function
+        /// @brief periodic velocity function
         /// @param t time
         /// @return velocity vector
         Point<2> get_vel(const double &t)
@@ -63,7 +64,7 @@ namespace PICsimulator::TestSimulators
             return Point<2>(-std::sin(t), std::cos(t));
         }
 
-        /// @brief constant acceleration function
+        /// @brief periodic acceleration function
         /// @param t time
         /// @return acceleration vector
         Point<2> get_acc(const double & t)
@@ -94,6 +95,9 @@ namespace PICsimulator::TestSimulators
         /// @brief Constructor
         /// @param dt_ timestep time
         /// @param T_ total simulation time
+        /// @param true_loc_ function to get the true location
+        /// @param true_vel_ function to get the true velocity
+        /// @param true_acc_ function to get the acceleration
         TestSimulator(  const double &dt_,
                         const double &T_, 
                         const fun &true_loc_=ConstantVelocity2D::get_loc, 

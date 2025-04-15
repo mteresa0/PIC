@@ -51,67 +51,101 @@ static double DT, DT_CUMULATIVE_CHRONO;
 
 namespace PICsimulator{
 
+    /// Boltzmann constant in J/K
     const double BOLTZMANN_K = 1.380649e-23;  // J/K
+    /// Temperature in K
     const double TEMPERATURE = 10000;         // K
+    /// Electron mass in kg
     const double ELECTR_MASS = 1.9093837e-31; // kg
     
     using namespace dealii;
 
+    /// @brief default domain for the simulation. Lower and upper vertices are
+    /// of the unit square (2D) or unit cube (3D).
+    /// @tparam dim spatial dimension
     template<int dim>
-    Domain::ReflectiveDomain<dim> initDomain;
+    Domain::ReflectiveDomain<dim> default_domain;
 
+    /// @brief get the default domain for the simulation
+    /// @tparam dim spatial dimension
+    /// @return ReflectiveDomain<dim> with UnitSquare lower and upper vertices
     template<int dim>
     const Domain::DomainData<dim>& get_default_domain() {
-        return initDomain<dim>;  // Return reference to the instantiated object
+        return default_domain<dim>;  // Return reference to the instantiated object
     }
 
+    /// @brief Simulator class. 
+    /// @tparam dim spatial dimension
+    /// @details This class is the main class of the simulation. 
+    /// It handles the initialization of the grid and of the particle handler,
+    /// the simulation loop, the integration of the particle state 
+    /// and the output of the data.
     template<int dim>
     class Simulator{
+
+        // only 2D and 3D are allowed
         static_assert(dim==2||dim==3, "The dimension must must 2 or 3.");
 
     public:
         using velocity_type = Tensor<1, dim>;
         using location_type = Point<dim>;
 
-        /// @brief constructor
-        /// @param domain_data_ 
+        /// @brief Constructor of the Simulator class
+        /// @param dt_ time step
+        /// @param T_ total simulation time
+        /// @param n_particles_ number of particles
+        /// @param domain_data_ domain data object
         Simulator(
             const double &dt_ = 1e-8,
             const double &T_ = 1e-5,
+            const unsigned int &n_particles_ = 100,
             const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>());
         
-        /// @brief run simulation
+        /// @brief run the simulation
         void run();   
 
-        /// @brief destructor
+        /// @brief Destructor of the Simulator class
         ~Simulator() = default;
 
     protected:
         
-        /// @brief called by the particle lost signal. 
-        /// It handles lost particles and reinsert them in the domain according to btype 
-        /// @param particle 
-        /// @param cell 
+        /// @brief It handles lost particles and reinsert them in the domain.
+        /// This function is called when a particle leaves the domain and it 
+        /// is passed to the particle handler in the constructor definition.
+        /// @param particle particle iterator object. This is the particle that
+        /// left the domain.
+        /// @param cell cell iterator object.
         void boundary_wall(
             const typename Particles::ParticleIterator<dim>         &particle,
             const typename Triangulation<dim>::active_cell_iterator &cell);
 
         //// INITIALIZATION VARIABLES
-        
+
+        /// @brief flag to check if the simulator is initialized
         bool initialized = false;
-        unsigned int n_particles = 0;
+
+        // simulation parameters
+        /// @brief number of particles in the simulation
+        const unsigned int n_particles = 0;
+        /// @brief time step
+        const double dt;
+        /// @brief total simulation time
+        const double T;
+        /// @brief particle mass
+        const double particle_mass = ELECTR_MASS;
 
         //// INIZIALIZATION FUNCTIONS
 
         /// @brief initialize grid and particles
         virtual void initialize();
         
-        /// @brief create the grid
+        /// @brief create the grid according to the domain data
         void make_grid();
 
         //// SIMULATION FUNCTIONS
 
-        /// @brief time iteration
+        /// @brief update the position and velocity of the particles
+        /// and evaluate the forces.
         void update_simulation_state();
 
         /// @brief evaluate acceleration (TODO)
@@ -126,29 +160,31 @@ namespace PICsimulator{
         //// SETTERS AND GETTERS
 
         /// @brief set the velocity of a particle
-        /// @param particle
-        /// @param velocity
-        void set_velocity(typename Particles::ParticleIterator<dim> &particle, const velocity_type &velocity);
+        /// @param particle particle pointer (particle iterator type).
+        /// @param velocity velocity of the particle to set. 
+        void set_velocity(
+            typename Particles::ParticleIterator<dim> &particle, 
+            const velocity_type &velocity);
 
         /// @brief get the velocity of a particle
-        /// @param particle
-        /// @return 
+        /// @param particle particle pointer (particle iterator type).
+        /// @return velocity of the particle. Tensor<1, dim> type.
         velocity_type get_velocity_from_properties(const typename Particles::ParticleIterator<dim> &particle);
 
         //// DATA MEMBERS
 
         // dealii objects
+        /// @brief triangulation of the domain
         dealii::Triangulation<dim>              triangulation;
+        /// @brief finite element mapping
         const dealii::MappingQ<dim>             mapping;
+        /// @brief finite element object
         DoFHandler<dim>                         dof_handler;
+        /// @brief particle handler object. It handles the particles and their properties.
         dealii::Particles::ParticleHandler<dim> particle_handler;
-
-        // simulation parameters
-        const double dt;
-        const double T;
-        const double particle_mass = ELECTR_MASS;
         
-        // storing domain data
+        /// @brief domain data object. It stores the domain information and 
+        /// how the particles behave when they leave the domain.
         const Domain::DomainData<dim> & domain_data;
 
     private:
@@ -156,7 +192,8 @@ namespace PICsimulator{
         /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();
 
-        /// @brief set initial velocity of each particles according to maxwell-boltzmann distribution
+        /// @brief set initial velocity of each particles according to 
+        /// maxwell-boltzmann distribution
         void set_initial_velocity();
 
         //// SIMULATION FUNCTIONS
@@ -168,8 +205,11 @@ namespace PICsimulator{
         void update_velocity();
 
         // random generators for maxwell distribution of velocity
+        /// @brief random device
         std::random_device rd;
+        /// @brief random number generator
         std::mt19937 gen; 
+        /// @brief normal distribution for velocity
         std::normal_distribution<double> normal_distr;
 
     };

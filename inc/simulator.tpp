@@ -1,5 +1,5 @@
 /**
- * @file simulator_def.inc
+ * @file simulator.tpp
  * @author Maria Teresa Cazzola 
  * @brief definitions of class simulator methods
  * @date 2025-04-11
@@ -7,18 +7,19 @@
  * @copyright Copyright (c) 2025
  * 
  */
-#include "simulator.hpp"
 
 template<int dim>
 PICsimulator::Simulator<dim>::Simulator(
     const double &dt_,
     const double &T_,
+    const unsigned int &n_particles_,
     const Domain::DomainData<dim> &domain_data_):
+n_particles(n_particles_),
+dt(dt_),
+T(T_),
 mapping(1), 
 dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
-dt(dt_),
-T(T_),
 domain_data(domain_data_),
 gen(rd()),
 normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
@@ -45,8 +46,8 @@ void PICsimulator::Simulator<dim>::run() {
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
      
     std::cout << "---------- starting simulation ----------" << std::endl;
-    TIC();
     REINIT_CUMULATIVE_CHRONO();
+    TIC();
 
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
@@ -57,13 +58,7 @@ void PICsimulator::Simulator<dim>::run() {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
             {
                 // Point<dim> position(it->get_location());
-                const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
-                
-                // // update position
-                // it->set_location(position + dt*velocity);
-
-                // update velocity
-                // set_velocity(it, velocity);
+                Tensor<1, dim> velocity(get_velocity_from_properties(it));
                 
                 // save kinetic energy per particle
                 double ke = particle_mass * velocity.norm();
@@ -82,9 +77,10 @@ void PICsimulator::Simulator<dim>::run() {
 
         // print data to files
         print_data_to_files(i);
-    }
+    } // end of time loop
 
     TOC();
+
     std::cout << "Simulation completed in " << DT      << " seconds" << std::endl; 
     std::cout << "sort particles time:    " << DT_CUMULATIVE_CHRONO << " seconds" << std::endl;
 
@@ -184,6 +180,9 @@ void PICsimulator::Simulator<dim>::initialize()
         std::cout << "Already initialized with:" << std::endl;
         std::cout << "n# particles: " << particle_handler.n_global_particles() << std::endl;
         std::cout << "n# cells: "     << triangulation.n_active_cells() << std::endl;
+
+        std::cout << " * Initialization skipped * " << std::endl;
+        std::cout << "!!! YOU ARE PROBABLY RUNNING AGAIN THE SIMULATION !!!" << std::endl;
         return;
     }
 
@@ -198,13 +197,25 @@ void PICsimulator::Simulator<dim>::initialize()
 template <int dim>
 void PICsimulator::Simulator<dim>::update_simulation_state()
 {
-    // update position
+
+    //// update position
+    // it actually updates the velocity to an intermediate value
+    // the update rule used here is:
+    // $x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt^2$
+    // $\hat{v}(t+dt) = v(t) + 0.5*a(t)*dt$
+    // with $\hat{v}(t+dt)$ the intermediate velocity
+    // and $a(t)$ the acceleration at the previous time step
     update_position();
 
-    // // evaluate forces
+    // //// evaluate forces
     // evaluate_forces();
 
-    // update velocity
+    //// update velocity
+    // it actually updates the velocity to the final value
+    // the update rule used here is:
+    // $v(t+dt) = \hat{v}(t+dt) + 0.5*a(t+dt)*dt$
+    // with $a(t+dt)$ the acceleration at the current time step
+    // and $\hat{v}(t+dt)$ the intermediate velocity
     update_velocity();
 
     return;
