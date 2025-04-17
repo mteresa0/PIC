@@ -8,6 +8,8 @@
  * 
  */
 
+#include "simulator.hpp"
+
 template<int dim>
 PICsimulator::Simulator<dim>::Simulator(
     const double &dt_,
@@ -52,7 +54,7 @@ void PICsimulator::Simulator<dim>::run() {
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
 
-        update_simulation_state();
+        update_simulation_state_leapfrog();
 
         {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
@@ -195,7 +197,7 @@ void PICsimulator::Simulator<dim>::initialize()
 }
 
 template <int dim>
-void PICsimulator::Simulator<dim>::update_simulation_state()
+void PICsimulator::Simulator<dim>::update_simulation_state_verlet()
 {
 
     //// update position
@@ -205,7 +207,7 @@ void PICsimulator::Simulator<dim>::update_simulation_state()
     // $\hat{v}(t+dt) = v(t) + 0.5*a(t)*dt$
     // with $\hat{v}(t+dt)$ the intermediate velocity
     // and $a(t)$ the acceleration at the previous time step
-    update_position();
+    update_position_verlet();
 
     // //// evaluate forces
     // evaluate_forces();
@@ -216,7 +218,19 @@ void PICsimulator::Simulator<dim>::update_simulation_state()
     // $v(t+dt) = \hat{v}(t+dt) + 0.5*a(t+dt)*dt$
     // with $a(t+dt)$ the acceleration at the current time step
     // and $\hat{v}(t+dt)$ the intermediate velocity
-    update_velocity();
+    update_velocity_verlet();
+
+    return;
+}
+
+template <int dim>
+void PICsimulator::Simulator<dim>::update_simulation_state_leapfrog()
+{
+    // update velocity and position
+    update_leapfrog();
+
+    // evaluate forces
+    // evaluate_forces();
 
     return;
 }
@@ -229,7 +243,7 @@ typename PICsimulator::Simulator<dim>::location_type
 }
 
 template <int dim>
-void PICsimulator::Simulator<dim>::update_position()
+void PICsimulator::Simulator<dim>::update_position_verlet()
 {
     // initialize acceleration
     location_type acceleration;
@@ -250,7 +264,7 @@ void PICsimulator::Simulator<dim>::update_position()
 }
 
 template <int dim>
-void PICsimulator::Simulator<dim>::update_velocity()
+void PICsimulator::Simulator<dim>::update_velocity_verlet()
 {
 
     // initialize acceleration
@@ -265,6 +279,29 @@ void PICsimulator::Simulator<dim>::update_velocity()
 
             // update position
             set_velocity(it, velocity + 0.5*dt*new_acceleration);
+        }
+    }
+}
+
+template <int dim>
+void PICsimulator::Simulator<dim>::update_leapfrog()
+{
+    // initialize acceleration
+    location_type acceleration;
+
+    {
+        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
+        {
+            location_type position(it->get_location());
+
+            Tensor<1, dim> velocity(get_velocity_from_properties(it));
+
+            acceleration = this->evaluate_acceleration();
+
+            // update position
+            velocity += dt*acceleration;
+            set_velocity(it, velocity);
+            it->set_location(position + dt*velocity);
         }
     }
 }

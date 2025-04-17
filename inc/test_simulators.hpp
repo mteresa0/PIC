@@ -156,7 +156,13 @@ namespace PICsimulator::TestSimulators
         /// @brief updates position and velocity errors and 
         /// updates true location and position
         /// @param particle particle iterator
-        void compute_errors(
+        void compute_errors_verlet(
+            typename Particles::ParticleIterator<dim> &particle);
+
+        /// @brief updates position and velocity errors and 
+        /// updates true location and position
+        /// @param particle particle iterator
+        void compute_errors_leapfrog(
             typename Particles::ParticleIterator<dim> &particle);
 
         /// @brief compute L2 norm 
@@ -192,10 +198,6 @@ namespace PICsimulator::TestSimulators
         fun get_acceleration;
 
         location_type evaluate_acceleration() override{
-            if(count%2!=0){
-                current_time += this->dt;
-            }
-            ++count;
             return get_acceleration(current_time);
         }
 
@@ -300,7 +302,7 @@ namespace PICsimulator::TestSimulators
     inline void TestSimulators::TestSimulator<dim>::initialize_particle()
     {
         location_type initial_location = get_true_location(0.);
-        velocity_type initial_velocity(get_true_velocity(0.));
+        velocity_type initial_velocity(get_true_velocity(-this->dt/2));
 
         std::cout << "\ninitial location: " << initial_location;
         std::cout << "\ninitial velocity: " << initial_velocity;
@@ -333,14 +335,16 @@ namespace PICsimulator::TestSimulators
             // one-step iteration update using the implemented algorithm (verlet)
             // also timing it
             START_CUMULATIVE_CHRONO();
-            this->update_simulation_state();
+            this->update_simulation_state_leapfrog();
             ADD_TIME_CUMULATIVE_CHRONO();
+            ++count;
+            current_time += this->dt;
 
             // particle handler reinitialization is skipped because we don't 
             // need it to have the particle reassigned to the correct cell
 
             // computing the error:
-            compute_errors(it);
+            compute_errors_leapfrog(it);
         }
 
         // printing the errors and the elipsed time of the simulation
@@ -351,7 +355,7 @@ namespace PICsimulator::TestSimulators
     }
 
     template <int dim>
-    inline void TestSimulator<dim>::compute_errors(
+    inline void TestSimulator<dim>::compute_errors_verlet(
         typename Particles::ParticleIterator<dim> &particle)
     {
         // get location and velocity of the particle
@@ -365,6 +369,33 @@ namespace PICsimulator::TestSimulators
         // compute the errors
         location_error += norm(location - true_location) * this->dt;
         velocity_error += norm(velocity - true_velocity) * this->dt;
+
+    }    
+    
+    template <int dim>
+    inline void TestSimulator<dim>::compute_errors_leapfrog(
+        typename Particles::ParticleIterator<dim> &particle)
+    {
+        // get location and velocity of the particle
+        location_type location(particle->get_location());
+        velocity_type velocity(this->get_velocity_from_properties(particle));
+
+        // get the true location and velocity
+        location_type true_location(get_true_location(current_time));
+        velocity_type true_velocity(get_true_velocity(current_time-this->dt/2));
+
+        // compute the errors
+        location_error += norm(location - true_location) * this->dt;
+        velocity_error += norm(velocity - true_velocity) * this->dt;
+
+        // std::cout << "\nit: " << current_time << "  vel_error    pos_error" << 
+        // std::endl  << "          " << this->norm(velocity - true_velocity) << 
+        // "        " << this->norm(location - true_location)  << std::endl;
+
+        // std::cout << "sim location: " << location << std::endl;
+        // std::cout << "ref location: " << true_location << std::endl;
+        // std::cout << "sim velocity: " << velocity  << std::endl;
+        // std::cout << "ref velocity: " << true_velocity << std::endl;
 
     }
 

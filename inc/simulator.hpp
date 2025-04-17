@@ -145,8 +145,12 @@ namespace PICsimulator{
         //// SIMULATION FUNCTIONS
 
         /// @brief update the position and velocity of the particles
-        /// and evaluate the forces.
-        void update_simulation_state();
+        /// and evaluate the forces according to Verlet scheme.
+        void update_simulation_state_verlet();
+
+        /// @brief update the position and velocity of the particles
+        /// and evaluate the forces according to leapfrog scheme.
+        void update_simulation_state_leapfrog();
 
         /// @brief evaluate acceleration (TODO)
         virtual location_type evaluate_acceleration();
@@ -199,10 +203,13 @@ namespace PICsimulator{
         //// SIMULATION FUNCTIONS
 
         /// @brief update the position according to Verlet algorithm
-        void update_position();
+        void update_position_verlet();
 
         /// @brief update the velocity according to Verlet algorithm
-        void update_velocity();
+        void update_velocity_verlet();
+
+        /// @brief update the velocity according to Verlet algorithm
+        void update_leapfrog();
 
         // random generators for maxwell distribution of velocity
         /// @brief random device
