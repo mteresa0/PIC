@@ -27,6 +27,7 @@
 #include <type_traits>
 
 #include "domain.hpp"
+#include "streaming.hpp"
 #include <chrono>
 
 static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME;
@@ -107,7 +108,11 @@ namespace PICsimulator{
         /// @brief Destructor of the Simulator class
         ~Simulator() = default;
 
+        friend class Streaming<dim, StreamingAlgorithm::LEAPFROG>;
+
     protected:
+
+        Streaming<dim, StreamingAlgorithm::LEAPFROG> streaming_algorithm;
         
         /// @brief It handles lost particles and reinsert them in the domain.
         /// This function is called when a particle leaves the domain and it 

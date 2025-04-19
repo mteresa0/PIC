@@ -16,6 +16,7 @@ PICsimulator::Simulator<dim>::Simulator(
     const double &T_,
     const unsigned int &n_particles_,
     const Domain::DomainData<dim> &domain_data_):
+streaming_algorithm(this),
 n_particles(n_particles_),
 dt(dt_),
 T(T_),
@@ -54,7 +55,7 @@ void PICsimulator::Simulator<dim>::run() {
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
 
-        update_simulation_state_leapfrog();
+        streaming_algorithm.advance(particle_handler, dt);
 
         {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
@@ -207,6 +208,7 @@ void PICsimulator::Simulator<dim>::update_simulation_state_verlet()
     // $\hat{v}(t+dt) = v(t) + 0.5*a(t)*dt$
     // with $\hat{v}(t+dt)$ the intermediate velocity
     // and $a(t)$ the acceleration at the previous time step
+    // v(t+dt) = v(t) + 1/2*( a(t) + a(t+dt) ) * dt
     update_position_verlet();
 
     // //// evaluate forces
@@ -283,6 +285,8 @@ void PICsimulator::Simulator<dim>::update_velocity_verlet()
     }
 }
 
+// x(t+dt) = x(t) + dt*v(t-1/2dt)
+// v(t+1/2dt) = v(t-1/2dt) + dt* a(t)
 template <int dim>
 void PICsimulator::Simulator<dim>::update_leapfrog()
 {
