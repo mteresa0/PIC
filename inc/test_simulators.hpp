@@ -11,6 +11,7 @@
 #define TEST_SIMULATORS_HPP
 
 #include "simulator.hpp"
+#include "streaming.hpp"
 #include "domain.hpp"
 #include <cmath>
 #include <functional>
@@ -24,195 +25,156 @@ namespace PICsimulator::TestSimulators
     template<int dim>
     using true_val_fun = Point<dim>(*)(const double &);
 
-    namespace ConstantVelocity2D {
+    template<int dim>
+    class BaseMotion {
+    public:
+        /// @brief Constructor
+        BaseMotion() = default;
 
-        Point<2> get_loc(const double &t)
-        {
-            return Point<2>(t+0.1, 0.1);
-        }
+        /// @brief Destructor
+        virtual ~BaseMotion() = default;
 
-        /// @brief constant velocity function
-        /// @return velocity vector
-        Point<2> get_vel(const double &)
-        {
-            return Point<2>(1, 0);
-        }
-
-        /// @brief constant acceleration function
-        /// @return acceleration vector
-        Point<2> get_acc(const double &)
-        {
-            return Point<2>(0, 0);
-        }
-
-    }
-
-    namespace PeriodicMotion2D {
-        /// @brief periodic motion function
+        /// @brief get location function
         /// @param t time
         /// @return location vector
-        Point<2> get_loc(const double &t)
-        {
-            return Point<2>(std::cos(t), std::sin(t));
-        }
+        virtual Point<dim> get_loc(const double &t) const = 0;
 
-        /// @brief periodic velocity function
+        /// @brief get velocity function
         /// @param t time
         /// @return velocity vector
-        Point<2> get_vel(const double &t)
-        {
-            return Point<2>(-std::sin(t), std::cos(t));
-        }
+        virtual Point<dim> get_vel(const double &t) const = 0;
 
-        /// @brief periodic acceleration function
+        /// @brief get acceleration function
         /// @param t time
         /// @return acceleration vector
-        Point<2> get_acc(const double & t)
-        {
-            return Point<2>(-std::cos(t), -std::sin(t));
-        }
-    }
+        virtual Point<dim> get_acc(const double &t) const = 0;
+    };
 
     template<int dim>
-    void convergence_test(  const true_val_fun<dim> &true_loc,
-                            const true_val_fun<dim> &true_vel,
-                            const true_val_fun<dim> &true_acc,
+    class ConstantVelocity : public BaseMotion<dim> {
+    public:
+        ConstantVelocity(
+            const Point<dim> &velocity_,
+            const Point<dim> &initial_location_):
+            velocity(velocity_),
+            initial_location(initial_location_)
+        {};
+
+        Point<dim> get_loc(const double &t) const override;
+        Point<dim> get_vel(const double &t) const override;
+        Point<dim> get_acc(const double &t) const override;
+
+    private:
+        const Point<dim> velocity;
+        const Point<dim> initial_location;
+    };
+
+    template<int dim>
+    class PeriodicMotion : public BaseMotion<dim> {  
+    public: 
+        PeriodicMotion(){};     
+        Point<dim> get_loc(const double &t) const override;
+        Point<dim> get_vel(const double &t) const override;
+        Point<dim> get_acc(const double &t) const override;
+    };
+
+    /// @brief computes convergence rates for the location and velocity errors
+    /// @tparam dim template parameter for the dimension
+    /// @param motion motion object
+    /// @param dts vector of time steps
+    /// @param total_time final time of the simulation
+    template<int dim>
+    void convergence_test(  const BaseMotion<dim> &motion,
                             const std::vector<double> &dts,
                             const double &total_time);
 
-    /// @brief Test simulator base class. 
-    /// @brief Test different scenario described in the derived classes.
-    /// @tparam dim dimension of the domain
-    template<int dim>
-    class TestSimulator : public PICsimulator::Simulator<dim>
-    {
+    template<int dim, StreamingAlgorithm SA>
+    class TestStreaming{
     public:
-        using typename PICsimulator::Simulator<dim>::location_type;
-        using typename PICsimulator::Simulator<dim>::velocity_type;
-
-        using fun = true_val_fun<dim>;
+        using velocity_type = typename Simulator<dim>::velocity_type;
+        using location_type = typename Simulator<dim>::location_type;
 
         /// @brief Constructor
-        /// @param dt_ timestep time
-        /// @param T_ total simulation time
-        /// @param true_loc_ function to get the true location
-        /// @param true_vel_ function to get the true velocity
-        /// @param true_acc_ function to get the acceleration
-        TestSimulator(  const double &dt_,
-                        const double &T_, 
-                        const fun &true_loc_=ConstantVelocity2D::get_loc, 
-                        const fun &true_vel_=ConstantVelocity2D::get_vel, 
-                        const fun &true_acc_=ConstantVelocity2D::get_acc):
-            PICsimulator::Simulator<dim>(dt_, T_),
-            get_true_location(true_loc_),
-            get_true_velocity(true_vel_), 
-            get_acceleration(true_acc_)
-            {};
+        TestStreaming(
+            const double &dt_, 
+            const double &T_,
+            const BaseMotion<dim> &motion_):
+            dt(dt_), 
+            T(T_),
+            streaming_algorithm(
+                dt_, 
+                std::bind(&TestStreaming::get_acceleration, this)),
+            motion(&motion_),
+            mapping(1),
+            particle_handler(triangulation, mapping, dim)
+        {
+            dealii::GridGenerator::hyper_cube(triangulation);
+
+            triangulation.refine_global(4);
+        };
 
         /// @brief Destructor
-        ~TestSimulator() = default;
-        
+        ~TestStreaming() = default;
+
         /// @brief run test
         void run_test();
 
         /// @brief print errors to file
         /// @param filename name of the file
-        /// @param overwrite file
-        void print_errors_to_file(
-            const std::string &filename, 
-            const bool &overwrite = false)
-        {
-            std::ofstream file;
-            if (overwrite) {
-                file.open(filename);
-                file << "location_error velocity_error dt\n";
-            } 
-            else
-                file.open(filename, std::ios::app);
+        /// @param overwrite if true, overwrite the file
+        void print_errors_to_file( const std::string &filename, 
+                                    const bool &overwrite = false);
 
-            file << this->location_error << " " << this->velocity_error << " " 
-                << this->dt << "\n";
-            file.close();
-        };
+        /// @brief get location error
+        /// @return location error
+        double get_loc_error() const { return location_error; }
 
-        double get_loc_error() const {
-            return location_error;
-        };
-
-        double get_vel_error() const {
-            return velocity_error;
-        };
+        /// @brief get velocity error
+        /// @return velocity error
+        double get_vel_error() const { return velocity_error; }
 
     private:
-        /// @brief initialize grid and particle handler
-        void initialize() override;
-
-        /// @brief initialize particle
-        void initialize_particle();
-
-        /// @brief initialize grid
-        void initialize_grid(){ this->make_grid(); };
-
-        /// @brief updates position and velocity errors and 
-        /// updates true location and position
-        /// @param particle particle iterator
-        void compute_errors_verlet(
-            typename Particles::ParticleIterator<dim> &particle);
-
-        /// @brief updates position and velocity errors and 
-        /// updates true location and position
-        /// @param particle particle iterator
-        void compute_errors_leapfrog(
-            typename Particles::ParticleIterator<dim> &particle);
-
-        /// @brief compute L2 norm 
-        /// @param v velocity_type vector (dealii::Tensor<1, dim>)
-        /// @return L2 norm of the input Tensor<1, dim> v
-        double norm(const velocity_type & v){
-            double r = 0;
-            for (int d = 0; d<dim; ++d){
-                r += v[d]*v[d];
-            }
-            return std::sqrt(r);
-        };
-
-        /// @brief compute L2 norm 
-        /// @param l location_type vector (dealii::Point<dim>)
-        /// @return L2 norm of the input Point<dim> l
-        double norm(const location_type & l){
-            double r = 0;
-            for (int d = 0; d<dim; ++d){
-                r += l[d]*l[d];
-            }
-            return std::sqrt(r);
-        };
+        const double dt; /// time step
+        const double T; /// total simulation time
 
         double location_error = 0; /// location error
         double velocity_error = 0; /// velocity error
+        double current_time = 0.; /// current time
 
-        double current_time = 0.;
-        unsigned int count = 0;
+        unsigned int count = 0; /// counts how many times acceleration is called
 
-        fun get_true_location;
-        fun get_true_velocity;
-        fun get_acceleration;
+        Streaming<dim, SA> streaming_algorithm; /// streaming algorithm object
 
-        location_type evaluate_acceleration() override{
-            return get_acceleration(current_time);
-        }
+        /// @brief initialize grid and particle handler
+        void initialize();
 
-    }; // end TestSimulator class
+        /// @brief compute errors
+        /// @param particle particle iterator
+        void compute_errors(
+            typename Particles::ParticleIterator<dim> &particle);
+            
+        /// get acceleration function
+        Point<dim> get_acceleration();
 
-    
+        const BaseMotion<dim> *motion; /// motion object
+
+        // dealii objects
+        /// @brief triangulation of the domain
+        dealii::Triangulation<dim>              triangulation;
+        /// @brief finite element mapping
+        const dealii::MappingQ<dim>             mapping;
+
+        Particles::ParticleHandler<dim> particle_handler; /// particle handler object
+
+    }; // end TestStreaming class
+   
     /****************************
             DEFINITIONS   
     ****************************/
 
     template <int dim>
     void convergence_test(
-        const true_val_fun<dim> &true_loc, 
-        const true_val_fun<dim> &true_vel, 
-        const true_val_fun<dim> &true_acc, 
+        const BaseMotion<dim> &motion, 
         const std::vector<double> &dts, 
         const double &total_time)
     {
@@ -221,17 +183,19 @@ namespace PICsimulator::TestSimulators
         std::vector<double> err_loc(dts.size());
         std::vector<double> err_vel(dts.size());
 
+        constexpr StreamingAlgorithm sa = StreamingAlgorithm::VERLET;
+
         for(unsigned int i = 0; i<dts.size(); ++i)
         {
-            TestSimulator<dim> test_simulator(
-                dts[i], total_time, true_loc, true_vel, true_acc);
+            TestStreaming<dim, sa> test_streaming(
+                dts[i], total_time, motion);
             
-            test_simulator.run_test();
-            test_simulator.print_errors_to_file("outputs/errors.csv", overwrite);
+            test_streaming.run_test();
+            test_streaming.print_errors_to_file("outputs/errors.csv", overwrite);
             overwrite = false;
 
-            err_loc[i] = test_simulator.get_loc_error();
-            err_vel[i] = test_simulator.get_vel_error();
+            err_loc[i] = test_streaming.get_loc_error();
+            err_vel[i] = test_streaming.get_vel_error();
 
         }
 
@@ -264,67 +228,77 @@ namespace PICsimulator::TestSimulators
                     << std::setw(20) << vel_rate[i] << "\n";
         }
 
-    };
-
-
-    /*
-     * TestSimulator Definitions
-     */
+    }
 
     template<int dim>
-    inline void TestSimulator<dim>::initialize()
-    {
-        if (this->initialized)
-        {
-            std::cout << "Already initialized with:" << std::endl;
-            std::cout << "n# particles: " << this->particle_handler.n_global_particles() << std::endl;
-            // std::cout << "n# cells: "     << this->particle_handler.n_global_cells() << std::endl;
-            return;
-        }
-
-
-        std::cout << "\n------- TEST SIMULATOR INITIALIZATION -------\n";
-
-        // initialize grid and particles
-        initialize_grid();
-        initialize_particle();
-
-        std::cout << "dt: " << this->dt << "\nT: " << this->T << std::endl;
-        std::cout << "# time steps: " << this->T/this->dt << std::endl;
-        std::cout << "# cells: " << this->triangulation.n_active_cells()<< std::endl;
-        std::cout << "# particles: " << this->particle_handler.n_global_particles() << std::endl;
-        std::cout << "---------------------------------------------\n";
-        this->initialized = true;
-        return;
+    Point<dim> ConstantVelocity<dim>::get_loc(const double &t) const { 
+        return initial_location + velocity*t;
+    }
+    template<int dim>
+    Point<dim> ConstantVelocity<dim>::get_vel(const double &)const {
+        return velocity;
+    }
+    template<>
+    Point<2> ConstantVelocity<2>::get_acc(const double &) const {
+        return Point<2>(0, 0);
+    }
+    template<>
+    Point<3> ConstantVelocity<3>::get_acc(const double &) const {
+        return Point<3>(0, 0, 0);
     }
 
-    template <int dim>
-    inline void TestSimulators::TestSimulator<dim>::initialize_particle()
-    {
-        location_type initial_location = get_true_location(0.);
-        velocity_type initial_velocity(get_true_velocity(-this->dt/2));
-
-        std::cout << "\ninitial location: " << initial_location;
-        std::cout << "\ninitial velocity: " << initial_velocity;
-
-        std::vector<location_type> position(1, initial_location);
-
-        this->particle_handler.insert_particles(position);
-
-        auto it = this->particle_handler.begin();
-        this->set_velocity(it, initial_velocity);
-
-        std::cout << "\n * particles inserted * \n";
+    template<>
+    Point<2> PeriodicMotion<2>::get_loc(const double &t) const {
+        return Point<2>(std::cos(t), std::sin(t));
+    }
+    template<>
+    inline Point<2> PeriodicMotion<2>::get_vel(const double &t) const {
+        return Point<2>(-std::sin(t), std::cos(t));
+    }
+    template<>
+    inline Point<2> PeriodicMotion<2>::get_acc(const double &t) const {
+        return Point<2>(-std::cos(t), -std::sin(t));
     }
 
-    template <int dim>
-    void TestSimulator<dim>::run_test()
+    template<>
+    inline Point<3> PeriodicMotion<3>::get_loc(const double &t) const {
+        return Point<3>(std::cos(t), std::sin(t), 0);
+    }
+    template<>
+    inline Point<3> PeriodicMotion<3>::get_vel(const double &t) const {
+        return Point<3>(-std::sin(t), std::cos(t), 0);
+    }
+    template<>
+    inline Point<3> PeriodicMotion<3>::get_acc(const double &t) const {
+        return Point<3>(-std::cos(t), -std::sin(t), 0);
+    }
+
+    template <int dim, StreamingAlgorithm SA>
+    inline void TestStreaming<dim, SA>::print_errors_to_file(
+        const std::string &filename, 
+        const bool &overwrite)
+    {
+            std::ofstream file;
+            if (overwrite) {
+                file.open(filename);
+                file << "location_error velocity_error dt\n";
+            } 
+            else
+                file.open(filename, std::ios::app);
+
+            file << this->location_error << " " << this->velocity_error << " " 
+                << this->dt << "\n";
+            file.close();
+    };
+
+    template <int dim, StreamingAlgorithm SA>
+    inline void TestSimulators::TestStreaming<dim, SA>::run_test()
     {
         // initialize the grid and the particle_handler
-        this->initialize();
+        initialize();
 
         // get particle iterator and starting data
-        auto it = this->particle_handler.begin();
+        auto it = particle_handler.begin();
 
         // make sure to reset DT variable
         REINIT_CUMULATIVE_CHRONO();
@@ -335,16 +309,16 @@ namespace PICsimulator::TestSimulators
             // one-step iteration update using the implemented algorithm (verlet)
             // also timing it
             START_CUMULATIVE_CHRONO();
-            this->update_simulation_state_leapfrog();
+            streaming_algorithm.advance(particle_handler);
             ADD_TIME_CUMULATIVE_CHRONO();
-            ++count;
+
             current_time += this->dt;
 
             // particle handler reinitialization is skipped because we don't 
             // need it to have the particle reassigned to the correct cell
 
             // computing the error:
-            compute_errors_leapfrog(it);
+            compute_errors(it);
         }
 
         // printing the errors and the elipsed time of the simulation
@@ -354,49 +328,74 @@ namespace PICsimulator::TestSimulators
     
     }
 
-    template <int dim>
-    inline void TestSimulator<dim>::compute_errors_verlet(
+    template <int dim, StreamingAlgorithm SA>
+    inline void TestSimulators::TestStreaming<dim, SA>::initialize()
+    {
+        // initialize particle handler
+        location_type initial_location = motion->get_loc(0.);
+        velocity_type initial_velocity;
+        if constexpr(SA == StreamingAlgorithm::VERLET)
+            initial_velocity = (motion->get_vel(0.));
+        else
+            initial_velocity = (motion->get_vel(-dt/2));
+
+        std::cout << "\ninitial location: " << initial_location;
+        std::cout << "\ninitial velocity: " << initial_velocity;
+
+        std::vector<location_type> position(1, initial_location);
+
+        particle_handler.insert_particles(position);
+
+        auto it = particle_handler.begin();
+        set_velocity(it, initial_velocity);
+
+        std::cout << "\n * particles inserted * \n";
+        
+    }
+
+    template <int dim, StreamingAlgorithm SA>
+    inline void TestStreaming<dim, SA>::compute_errors(
         typename Particles::ParticleIterator<dim> &particle)
     {
         // get location and velocity of the particle
         location_type location(particle->get_location());
-        velocity_type velocity(this->get_velocity_from_properties(particle));
+        velocity_type velocity(get_velocity_from_properties(particle));
 
         // get the true location and velocity
-        location_type true_location(get_true_location(current_time));
-        velocity_type true_velocity(get_true_velocity(current_time));
+        location_type true_location(motion->get_loc(current_time));
+        velocity_type true_velocity;
+        if constexpr(SA == StreamingAlgorithm::LEAPFROG)
+            true_velocity = motion->get_vel(current_time-dt/2);
+        else
+            true_velocity = motion->get_vel(current_time);
 
         // compute the errors
-        location_error += norm(location - true_location) * this->dt;
-        velocity_error += norm(velocity - true_velocity) * this->dt;
-
-    }    
-    
-    template <int dim>
-    inline void TestSimulator<dim>::compute_errors_leapfrog(
-        typename Particles::ParticleIterator<dim> &particle)
-    {
-        // get location and velocity of the particle
-        location_type location(particle->get_location());
-        velocity_type velocity(this->get_velocity_from_properties(particle));
-
-        // get the true location and velocity
-        location_type true_location(get_true_location(current_time));
-        velocity_type true_velocity(get_true_velocity(current_time-this->dt/2));
-
-        // compute the errors
-        location_error += norm(location - true_location) * this->dt;
-        velocity_error += norm(velocity - true_velocity) * this->dt;
+        location_error += norm(location - true_location) * dt;
+        velocity_error += norm(velocity - true_velocity) * dt;
 
         // std::cout << "\nit: " << current_time << "  vel_error    pos_error" << 
-        // std::endl  << "          " << this->norm(velocity - true_velocity) << 
-        // "        " << this->norm(location - true_location)  << std::endl;
+        // std::endl  << "          " << norm(velocity - true_velocity) << 
+        // "        " << norm(location - true_location)  << std::endl;
 
         // std::cout << "sim location: " << location << std::endl;
         // std::cout << "ref location: " << true_location << std::endl;
         // std::cout << "sim velocity: " << velocity  << std::endl;
         // std::cout << "ref velocity: " << true_velocity << std::endl;
+    }
 
+    template <int dim, StreamingAlgorithm SA>
+    inline Point<dim> TestSimulators::TestStreaming<dim, SA>::get_acceleration()
+    {
+        if constexpr(SA == StreamingAlgorithm::VERLET)
+        {
+            double time = current_time;
+            if(count%2!=0){
+                time += this->dt;
+            }
+            ++count;
+            return motion->get_acc(time);
+        } else
+            return motion->get_acc(current_time);
     }
 
 } // namespace TestSimulators

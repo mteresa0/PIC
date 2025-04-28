@@ -36,7 +36,7 @@ namespace PICsimulator{
         explicit Streaming(Simulator<dim> *simulator_) : 
             sim(simulator_) ,
             dt(simulator_->dt), 
-            acc_fun(simulator_->evaluate_acceleration)
+            acc_fun(std::bind(&Simulator<dim>::evaluate_acceleration, simulator_))
         {};
 
         /// constructor for testing
@@ -126,13 +126,13 @@ namespace PICsimulator{
         typename Particles::ParticleHandler<dim> & ph)
     {
         // update location
-        update_location();
+        update_location(ph);
 
         // // update force field
         // sim->update_force_field();
 
         // update velocity
-        update_velocity();
+        update_velocity(ph);
     }
 
     template<int dim>
@@ -175,7 +175,7 @@ namespace PICsimulator{
             velocity_type velocity(get_velocity_from_properties(it));
 
             // get acceleration
-            acceleration = sim->evaluate_acceleration();
+            acceleration = acc_fun();
 
             // update location
             velocity += 0.5*dt*acceleration;
@@ -204,7 +204,7 @@ namespace PICsimulator{
             acceleration = acc_fun();
 
             // update velocity
-            set_velocity(velocity + 0.5*dt*acceleration);
+            set_velocity(it, velocity + 0.5*dt*acceleration);
         }
     }
 
