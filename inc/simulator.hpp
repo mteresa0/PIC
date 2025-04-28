@@ -26,6 +26,7 @@
 #include <random>
 #include <type_traits>
 
+#include "utilities.hpp"
 #include "domain.hpp"
 #include "streaming.hpp"
 #include <chrono>
@@ -168,17 +169,17 @@ namespace PICsimulator{
 
         //// SETTERS AND GETTERS
 
-        /// @brief set the velocity of a particle
-        /// @param particle particle pointer (particle iterator type).
-        /// @param velocity velocity of the particle to set. 
-        void set_velocity(
-            typename Particles::ParticleIterator<dim> &particle, 
-            const velocity_type &velocity);
+        // /// @brief set the velocity of a particle
+        // /// @param particle particle pointer (particle iterator type).
+        // /// @param velocity velocity of the particle to set. 
+        // void set_velocity(
+        //     typename Particles::ParticleIterator<dim> &particle, 
+        //     const velocity_type &velocity);
 
-        /// @brief get the velocity of a particle
-        /// @param particle particle pointer (particle iterator type).
-        /// @return velocity of the particle. Tensor<1, dim> type.
-        velocity_type get_velocity_from_properties(const typename Particles::ParticleIterator<dim> &particle);
+        // /// @brief get the velocity of a particle
+        // /// @param particle particle pointer (particle iterator type).
+        // /// @return velocity of the particle. Tensor<1, dim> type.
+        // velocity_type get_velocity_from_properties(const typename Particles::ParticleIterator<dim> &particle);
 
         //// DATA MEMBERS
 

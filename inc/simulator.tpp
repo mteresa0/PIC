@@ -55,7 +55,7 @@ void PICsimulator::Simulator<dim>::run() {
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
 
-        streaming_algorithm.advance(particle_handler, dt);
+        streaming_algorithm.advance(particle_handler);
 
         {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
@@ -310,22 +310,22 @@ void PICsimulator::Simulator<dim>::update_leapfrog()
     }
 }
 
-template <int dim>
-void PICsimulator::Simulator<dim>::set_velocity(
-    typename Particles::ParticleIterator<dim> &particle, 
-    const velocity_type &velocity)
-{
-    particle->set_properties(velocity);
-    return;
-}
+// template <int dim>
+// void PICsimulator::Simulator<dim>::set_velocity(
+//     typename Particles::ParticleIterator<dim> &particle, 
+//     const velocity_type &velocity)
+// {
+//     particle->set_properties(velocity);
+//     return;
+// }
 
-template <int dim>
-typename PICsimulator::Simulator<dim>::velocity_type
-PICsimulator::Simulator<dim>::get_velocity_from_properties(
-    const typename Particles::ParticleIterator<dim> &particle)
-{
-    return velocity_type(particle->get_properties());
-}
+// template <int dim>
+// typename PICsimulator::Simulator<dim>::velocity_type
+// PICsimulator::Simulator<dim>::get_velocity_from_properties(
+//     const typename Particles::ParticleIterator<dim> &particle)
+// {
+//     return velocity_type(particle->get_properties());
+// }
 
 template<int dim>
 void PICsimulator::Simulator<dim>::print_data_to_files(
