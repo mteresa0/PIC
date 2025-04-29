@@ -109,6 +109,21 @@ namespace PICsimulator{
         /// @brief Destructor of the Simulator class
         ~Simulator() = default;
 
+        /// no copy
+        Simulator(const Simulator &) = delete;
+        /// no move
+        Simulator(Simulator &&) = delete;
+        /// no assignment
+        Simulator & operator=(const Simulator &) = delete;
+        /// no move assignment
+        Simulator & operator=(Simulator &&) = delete;
+
+        /// @brief get the particle handler pointer
+        /// @return particle handler pointer
+        typename Particles::ParticleHandler<dim> & get_particle_handler() {
+            return particle_handler;
+        };
+
         friend class Streaming<dim, StreamingAlgorithm::VERLET>;
 
     private:
