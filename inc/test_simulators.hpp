@@ -183,7 +183,7 @@ namespace PICsimulator::TestSimulators
         std::vector<double> err_loc(dts.size());
         std::vector<double> err_vel(dts.size());
 
-        constexpr StreamingAlgorithm sa = StreamingAlgorithm::VERLET;
+        constexpr StreamingAlgorithm sa = StreamingAlgorithm::LEAPFROG;
 
         for(unsigned int i = 0; i<dts.size(); ++i)
         {

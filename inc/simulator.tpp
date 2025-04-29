@@ -16,7 +16,6 @@ PICsimulator::Simulator<dim>::Simulator(
     const double &T_,
     const unsigned int &n_particles_,
     const Domain::DomainData<dim> &domain_data_):
-streaming_algorithm(this),
 n_particles(n_particles_),
 dt(dt_),
 T(T_),
@@ -24,6 +23,7 @@ mapping(1),
 dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
 domain_data(domain_data_),
+streaming_algorithm(this),
 gen(rd()),
 normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
 {
@@ -196,136 +196,6 @@ void PICsimulator::Simulator<dim>::initialize()
     initialized = true;
     return;
 }
-
-template <int dim>
-void PICsimulator::Simulator<dim>::update_simulation_state_verlet()
-{
-
-    //// update position
-    // it actually updates the velocity to an intermediate value
-    // the update rule used here is:
-    // $x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt^2$
-    // $\hat{v}(t+dt) = v(t) + 0.5*a(t)*dt$
-    // with $\hat{v}(t+dt)$ the intermediate velocity
-    // and $a(t)$ the acceleration at the previous time step
-    // v(t+dt) = v(t) + 1/2*( a(t) + a(t+dt) ) * dt
-    update_position_verlet();
-
-    // //// evaluate forces
-    // evaluate_forces();
-
-    //// update velocity
-    // it actually updates the velocity to the final value
-    // the update rule used here is:
-    // $v(t+dt) = \hat{v}(t+dt) + 0.5*a(t+dt)*dt$
-    // with $a(t+dt)$ the acceleration at the current time step
-    // and $\hat{v}(t+dt)$ the intermediate velocity
-    update_velocity_verlet();
-
-    return;
-}
-
-template <int dim>
-void PICsimulator::Simulator<dim>::update_simulation_state_leapfrog()
-{
-    // update velocity and position
-    update_leapfrog();
-
-    // evaluate forces
-    // evaluate_forces();
-
-    return;
-}
-
-template <int dim>
-typename PICsimulator::Simulator<dim>::location_type
- PICsimulator::Simulator<dim>::evaluate_acceleration()
-{
-    return location_type();
-}
-
-template <int dim>
-void PICsimulator::Simulator<dim>::update_position_verlet()
-{
-    // initialize acceleration
-    location_type acceleration;
-
-    {
-        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
-        {
-            Point<dim> position(it->get_location());
-            const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
-
-            acceleration = this->evaluate_acceleration();
-            
-            // update position
-            it->set_location(position + dt*velocity + 0.5*dt*dt*acceleration);
-            set_velocity(it, velocity + 0.5 *dt * acceleration);
-        }
-    }
-}
-
-template <int dim>
-void PICsimulator::Simulator<dim>::update_velocity_verlet()
-{
-
-    // initialize acceleration
-    location_type new_acceleration;
-
-    {
-        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
-        {
-            const Tensor<1, dim> &velocity(get_velocity_from_properties(it));
-
-            new_acceleration = this->evaluate_acceleration();
-
-            // update position
-            set_velocity(it, velocity + 0.5*dt*new_acceleration);
-        }
-    }
-}
-
-// x(t+dt) = x(t) + dt*v(t-1/2dt)
-// v(t+1/2dt) = v(t-1/2dt) + dt* a(t)
-template <int dim>
-void PICsimulator::Simulator<dim>::update_leapfrog()
-{
-    // initialize acceleration
-    location_type acceleration;
-
-    {
-        for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
-        {
-            location_type position(it->get_location());
-
-            Tensor<1, dim> velocity(get_velocity_from_properties(it));
-
-            acceleration = this->evaluate_acceleration();
-
-            // update position
-            velocity += dt*acceleration;
-            set_velocity(it, velocity);
-            it->set_location(position + dt*velocity);
-        }
-    }
-}
-
-// template <int dim>
-// void PICsimulator::Simulator<dim>::set_velocity(
-//     typename Particles::ParticleIterator<dim> &particle, 
-//     const velocity_type &velocity)
-// {
-//     particle->set_properties(velocity);
-//     return;
-// }
-
-// template <int dim>
-// typename PICsimulator::Simulator<dim>::velocity_type
-// PICsimulator::Simulator<dim>::get_velocity_from_properties(
-//     const typename Particles::ParticleIterator<dim> &particle)
-// {
-//     return velocity_type(particle->get_properties());
-// }
 
 template<int dim>
 void PICsimulator::Simulator<dim>::print_data_to_files(

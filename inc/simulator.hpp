@@ -109,12 +109,10 @@ namespace PICsimulator{
         /// @brief Destructor of the Simulator class
         ~Simulator() = default;
 
-        friend class Streaming<dim, StreamingAlgorithm::LEAPFROG>;
+        friend class Streaming<dim, StreamingAlgorithm::VERLET>;
 
-    protected:
-
-        Streaming<dim, StreamingAlgorithm::LEAPFROG> streaming_algorithm;
-        
+    private:
+       
         /// @brief It handles lost particles and reinsert them in the domain.
         /// This function is called when a particle leaves the domain and it 
         /// is passed to the particle handler in the constructor definition.
@@ -143,43 +141,21 @@ namespace PICsimulator{
         //// INIZIALIZATION FUNCTIONS
 
         /// @brief initialize grid and particles
-        virtual void initialize();
+        void initialize();
         
         /// @brief create the grid according to the domain data
         void make_grid();
 
         //// SIMULATION FUNCTIONS
 
-        /// @brief update the position and velocity of the particles
-        /// and evaluate the forces according to Verlet scheme.
-        void update_simulation_state_verlet();
-
-        /// @brief update the position and velocity of the particles
-        /// and evaluate the forces according to leapfrog scheme.
-        void update_simulation_state_leapfrog();
-
         /// @brief evaluate acceleration (TODO)
-        virtual location_type evaluate_acceleration();
+        location_type evaluate_acceleration(){return location_type();};
 
         //// PRINTING FUNCTIONS
 
         /// @brief prints at a given timestep i the properties of each particle
         /// @param i timestep index
         void print_data_to_files(const int &);
-
-        //// SETTERS AND GETTERS
-
-        // /// @brief set the velocity of a particle
-        // /// @param particle particle pointer (particle iterator type).
-        // /// @param velocity velocity of the particle to set. 
-        // void set_velocity(
-        //     typename Particles::ParticleIterator<dim> &particle, 
-        //     const velocity_type &velocity);
-
-        // /// @brief get the velocity of a particle
-        // /// @param particle particle pointer (particle iterator type).
-        // /// @return velocity of the particle. Tensor<1, dim> type.
-        // velocity_type get_velocity_from_properties(const typename Particles::ParticleIterator<dim> &particle);
 
         //// DATA MEMBERS
 
@@ -197,7 +173,9 @@ namespace PICsimulator{
         /// how the particles behave when they leave the domain.
         const Domain::DomainData<dim> & domain_data;
 
-    private:
+        /// @brief streaming algorithm object. It handles the streaming of the
+        /// particles and computes new force field.
+        Streaming<dim, StreamingAlgorithm::VERLET> streaming_algorithm;
 
         /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();
@@ -205,17 +183,6 @@ namespace PICsimulator{
         /// @brief set initial velocity of each particles according to 
         /// maxwell-boltzmann distribution
         void set_initial_velocity();
-
-        //// SIMULATION FUNCTIONS
-
-        /// @brief update the position according to Verlet algorithm
-        void update_position_verlet();
-
-        /// @brief update the velocity according to Verlet algorithm
-        void update_velocity_verlet();
-
-        /// @brief update the velocity according to Verlet algorithm
-        void update_leapfrog();
 
         // random generators for maxwell distribution of velocity
         /// @brief random device
