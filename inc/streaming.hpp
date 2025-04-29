@@ -1,4 +1,13 @@
-
+/**
+ * @file streaming.hpp
+ * @author Maria Teresa Cazzola
+ * @brief Streaming class for the PIC simulator
+ * @version 0.1
+ * @date 2025-04-19
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
 #ifndef STREAMING_HPP
 #define STREAMING_HPP
 
