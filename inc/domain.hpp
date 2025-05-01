@@ -177,15 +177,14 @@ namespace Domain{
     inline void ReflectiveDomain<dim>::out_of_boundaries(location_type & location, velocity_type & velocity) const
     {
         for (int i = 0; i<dim; ++i){
-            if (location[i]<this->lower_vertex[i]){
-                location[i] = 2*this->lower_vertex[i]-location[i];
-                velocity[i] = -velocity[i];
-            } else if (location[i]>this->upper_vertex[i]){
-                location[i] = 2*this->upper_vertex[i]-location[i];
-                velocity[i] = -velocity[i];
-            } else {
-                velocity[i] = velocity[i];
-                location[i] = location[i];
+            while(location[i]<this->lower_vertex[i] || location[i]>this->upper_vertex[i]){
+                if (location[i]<this->lower_vertex[i]){
+                    location[i] = 2*this->lower_vertex[i]-location[i];
+                    velocity[i] = -velocity[i];
+                } else if (location[i]>this->upper_vertex[i]){
+                    location[i] = 2*this->upper_vertex[i]-location[i];
+                    velocity[i] = -velocity[i];
+                }
             }
         };   
         return;
@@ -197,11 +196,12 @@ namespace Domain{
         location_type difference(this->upper_vertex - this->lower_vertex);
 
         for (int i = 0; i<dim; ++i){
-            if (location[i]<this->lower_vertex[i]){
-                location[i] += difference[i];
-            }  
-            else if (location[i]>this->upper_vertex[i]){
-                location[i] -= difference[i];
+            while(location[i]<this->lower_vertex[i] || location[i]>this->upper_vertex[i]){
+                if (location[i]<this->lower_vertex[i]){
+                    location[i] += difference[i];
+                } else if (location[i]>this->upper_vertex[i]){
+                    location[i] -= difference[i];
+                }
             }
         }
         return;
