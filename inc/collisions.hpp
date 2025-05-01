@@ -41,15 +41,18 @@ namespace PICsimulator {
     class HardSphere: public CollisionKernel<dim> {
     public:
         /// HardSphere constructor
-        HardSphere(const double & d12_=1e-12):
+        HardSphere(const double & d12_=1e-8):
             d12(d12_) {};
         /// HardSphere destructor
         ~HardSphere() = default;
 
         /// compute cross section
-        double compute_cross_section(/*const Point<dim> & relative velocity*/) const override {
-            return M_PI * d12*d12;
-        };
+        double compute_cross_section(/*const Point<dim> & relative velocity*/) const override;
+
+        /// setter for the diameter
+        void set_diameter(const double & d12_){
+            d12 = d12_;
+        }
 
         /// compute cosine of the deflection angle chi
         double get_chi(/*const Point<dim> & relative velocity*/) const override{
@@ -63,7 +66,7 @@ namespace PICsimulator {
 
     private:
         /// diameter of the particles
-        const double d12;
+        double d12;
     }; // end HardSphere
 
     /// @brief Manages particle collisions within a simulation.
@@ -97,6 +100,16 @@ namespace PICsimulator {
         /// velocities are updated based on the provided collision kernel.
         void apply_collisions();
 
+        void initialize() {;
+            collision_kernel.set_diameter(sim->get_cell_diameter()/10.0);
+            sigma_cr_max = collision_kernel.compute_cross_section()*MEAN_VELOCITY *2;
+
+
+            std::cout << "---------- COLLISIONS INFO ------------\n";
+            std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
+            std::cout << "sigma cr " << collision_kernel.compute_cross_section()*MEAN_VELOCITY << std::endl;
+        }
+
     private:
         //// DATA MEMBERS
 
@@ -109,10 +122,10 @@ namespace PICsimulator {
         //// COLLISION PARAMENTERS
 
         /// maximum value between the cross section and the relative velocity
-        double sigma_cr_max= ;
+        double sigma_cr_max;
 
         /// weight of computational particles
-        double weight = 10;
+        double weight = 5e15;
         
         //// COLLISION FUNCTIONS
 
@@ -134,8 +147,11 @@ namespace PICsimulator {
         Particles::ParticleHandler<dim>& ph = sim->get_particle_handler();
         const DoFHandler<dim>& dof_handler = sim->get_dof_handler();
 
+        const double number_density = sim->get_number_density();
+        const double dt = sim->get_time_step();
+
         for (const auto & cell: dof_handler.active_cell_iterators())
-        {
+        {;
             particle_index N = ph.n_particles_in_cell(cell);
             if (N < 2){
                 continue;
@@ -146,13 +162,16 @@ namespace PICsimulator {
             const auto & pic_begin = pic.begin();            
 
             auto cell_volume = cell->measure();
+            double n = number_density*cell_volume;
 
             // compute number of collisions
-            double N_coll = 0.5*N*N*weight*sigma_cr_max/cell_volume;
+            double N_coll = 0.5*N*n*weight*weight*sigma_cr_max*dt;
             unsigned int int_N_coll = static_cast<unsigned int>(N_coll);
             
-            // if (N_coll>0)
             std::cout << "# collisions in cell " << cell->index() << " : " << N_coll << " "<< int_N_coll << std::endl;
+
+            // if (N_coll>0)
+            //     int_N_coll=1;
 
             for (unsigned int k = 0; k<int_N_coll; )
             {
@@ -191,12 +210,18 @@ namespace PICsimulator {
                     // compute post collisional relative velocity
                     velocity_type cr_ = compute_post_collisional_velocity(cr);
 
-                    // compute and update new velocities
+                    // compute and update new 
+                    std::cout << "\nv_i: " << norm(v_i) ;
+                    std::cout << "         v_j: " << norm(v_j) << std::endl;
                     update_velocities(it_i, it_j, cm, cr_);
+                    std::cout <<" sigma*cr =" << sigma * cr.norm() << "  probability = " << P_coll << std::endl;
 
                     ++k;
+                    if (U/P_coll > 1.0)
+                    {
+                        sigma_cr_max = sigma * cr.norm();
+                    }
                 }
-                // std::cout <<" sigma*cr " << sigma * cr.norm() << "  probability" << P_coll << std::endl;
                 // if (sigma * cr.norm() > sigma_cr_max)
                 // {
                 //     sigma_cr_max = sigma * cr.norm();
@@ -246,13 +271,26 @@ namespace PICsimulator {
         velocity_type v_i_new(cm + cr_ / 2.0);
         velocity_type v_j_new(cm - cr_ / 2.0);
 
+        std::cout << "v_i_new: " << norm(v_i_new);
+        std::cout << "       v_j_new: " << norm(v_j_new) << std::endl;
+
         // set the new velocities
         set_velocity(it_i, v_i_new);
         set_velocity(it_j, v_j_new);
     }
 
+    template<>
+    inline double HardSphere<2>::compute_cross_section() const
+    {
+        return d12;
+    }
+
+    template<>
+    inline double HardSphere<3>::compute_cross_section() const
+    {
+        return M_PI * d12*d12;
+    }
 
 } // namespace PICsimulator
-
 
 #endif // COLLISIONS_HPP

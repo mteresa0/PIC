@@ -122,9 +122,26 @@ namespace PICsimulator{
         /// @return dof handler pointer
         const DoFHandler<dim> & get_dof_handler() const {
             return dof_handler;
-        };        
+        };
 
         friend class Streaming<dim, StreamingAlgorithm::VERLET>;
+
+        double get_cell_volume() const {
+            return cell_volume;
+        };
+
+        double get_number_density() const {
+            return number_density;
+        };
+
+        double get_time_step() const {
+            return dt;
+        };
+
+        double get_cell_diameter() const {
+            double d_cell = dof_handler.begin()->diameter();
+            return d_cell;
+        };
 
     private:
        
@@ -152,6 +169,9 @@ namespace PICsimulator{
         const double T;
         /// @brief particle mass
         const double particle_mass = ELECTR_MASS;
+        /// @brief mean cell volume
+        double cell_volume;
+        double number_density;
 
         //// INIZIALIZATION FUNCTIONS
 

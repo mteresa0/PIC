@@ -199,6 +199,39 @@ void PICsimulator::Simulator<dim>::initialize()
     make_grid();
     insert_particles_dummy();
 
+    auto n_cells = triangulation.n_active_cells();
+    double cell_volume_, volume_domain, particles_per_cell;
+    double d_cell;
+
+    for(auto & cell: dof_handler.active_cell_iterators()){
+        cell_volume_ = cell->measure();
+        volume_domain += cell_volume_;
+        d_cell = cell->diameter();
+    }
+    number_density = n_particles/volume_domain;
+    particles_per_cell = static_cast<double>(n_particles)/n_cells;
+
+    cell_volume = volume_domain/n_cells;
+
+    std::cout << "Number density: " << number_density << " #/m^dim"<< std::endl;
+    std::cout << "Number of particles: " << n_particles << std::endl;
+    std::cout << "Number of cells: " << n_cells << std::endl;
+    std::cout << "Number of particles per cell: " 
+        << particles_per_cell << std::endl;
+    std::cout << "Diameter of a cell: " << d_cell << std::endl;
+    std::cout << "Volume of a cell: " 
+        << cell_volume << std::endl;
+    std::cout << "Volume of the domain: " << volume_domain << std::endl;
+
+    std::cout << "mean velocity: " 
+        << MEAN_VELOCITY << std::endl;
+    std::cout << "time to exit a cell: " 
+        << cell_volume / MEAN_VELOCITY << std::endl;
+    std::cout << "time step: " 
+        << dt << std::endl;
+
+    collision_handler.initialize();
+
     initialized = true;
     return;
 }
