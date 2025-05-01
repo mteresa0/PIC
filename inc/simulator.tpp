@@ -26,7 +26,7 @@ domain_data(domain_data_),
 streaming_algorithm(this),
 collision_handler(this),
 gen(rd()),
-normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
+normal_distr(0., DEV_VELOCITY)
 {
     particle_handler.signals.particle_lost.connect(
     [this]( const typename Particles::ParticleIterator<dim>         &particle,

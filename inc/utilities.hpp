@@ -16,8 +16,22 @@
 #include <deal.II/particles/particle_iterator.h>
 #include <deal.II/particles/particle_accessor.h>
 
+
+    /// Boltzmann constant in J/K
+static const double BOLTZMANN_K = 1.380649e-23;  // J/K
+    /// Temperature in K
+static const double TEMPERATURE = 100;         // K
+    /// Electron mass in kg
+static const double ELECTR_MASS = 1.9093837e-31; // kg
+
+static const double DEV_VELOCITY = std::sqrt(
+    BOLTZMANN_K * TEMPERATURE / ELECTR_MASS); // m/s
+
+static const double MEAN_VELOCITY = 2*DEV_VELOCITY / std::sqrt(2.0/M_PI); // m/s
+
 namespace PICsimulator {
     using namespace dealii;
+
     
     /// @brief get the velocity of a particle
     /// @param particle particle pointer (particle iterator type).

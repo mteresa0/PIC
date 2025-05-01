@@ -53,13 +53,6 @@ static double DT, DT_CUMULATIVE_CHRONO;
 
 
 namespace PICsimulator{
-
-    /// Boltzmann constant in J/K
-    const double BOLTZMANN_K = 1.380649e-23;  // J/K
-    /// Temperature in K
-    const double TEMPERATURE = 10000;         // K
-    /// Electron mass in kg
-    const double ELECTR_MASS = 1.9093837e-31; // kg
     
     using namespace dealii;
 
