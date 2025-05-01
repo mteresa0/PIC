@@ -29,6 +29,7 @@
 #include "utilities.hpp"
 #include "domain.hpp"
 #include "streaming.hpp"
+#include "collisions.hpp"
 #include <chrono>
 
 static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME;
@@ -124,6 +125,12 @@ namespace PICsimulator{
             return particle_handler;
         };
 
+        /// @brief get dof handler pointer
+        /// @return dof handler pointer
+        const DoFHandler<dim> & get_dof_handler() const {
+            return dof_handler;
+        };        
+
         friend class Streaming<dim, StreamingAlgorithm::VERLET>;
 
     private:
@@ -145,7 +152,7 @@ namespace PICsimulator{
 
         // simulation parameters
         /// @brief number of particles in the simulation
-        const unsigned int n_particles = 0;
+        const unsigned int n_particles;
         /// @brief time step
         const double dt;
         /// @brief total simulation time
@@ -191,6 +198,9 @@ namespace PICsimulator{
         /// @brief streaming algorithm object. It handles the streaming of the
         /// particles and computes new force field.
         Streaming<dim, StreamingAlgorithm::VERLET> streaming_algorithm;
+
+        /// @brief collision object. It handles the collisions of the particles.
+        Collisions<dim, HardSphere<dim>> collision_handler;
 
         /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();

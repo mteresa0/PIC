@@ -65,6 +65,20 @@ namespace PICsimulator {
         return std::sqrt(r);
     };
 
+    namespace Random {
+
+        /// @brief random device
+        std::random_device rd;
+        /// @brief random number generator
+        std::mt19937 gen(rd());
+        /// @brief uniform distribution: [0, 1)
+        std::uniform_real_distribution<double> uniform_distribution{0., 1.};
+
+        double RND(){
+            return uniform_distribution(gen);
+        };
+    }
+
 } // namespace PICsimulator
 
 #endif // UTILITIES_PIC_HPP

@@ -24,6 +24,7 @@ dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
 domain_data(domain_data_),
 streaming_algorithm(this),
+collision_handler(this),
 gen(rd()),
 normal_distr(0., std::sqrt(BOLTZMANN_K * TEMPERATURE / ELECTR_MASS))
 {
@@ -56,6 +57,11 @@ void PICsimulator::Simulator<dim>::run() {
         velocity_type sum_vels;
 
         streaming_algorithm.advance(particle_handler);
+
+        std::cout << "\ntime step: " << i << std::endl;
+        // std::cout << "# number of particles: " 
+        //     << particle_handler.n_global_particles() << std::endl;
+        collision_handler.apply_collisions();
 
         {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
@@ -117,19 +123,19 @@ void PICsimulator::Simulator<dim>::make_grid() {
 template<int dim>
 void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
-    int N = 3; // move it from here please!!!
-
-    Point<dim> initial_pos_vector;
+    // int N = n_particles; // move it from here please!!!
 
     auto upper_vertex = domain_data.get_upper_vertex();
     auto lower_vertex = domain_data.get_lower_vertex();
 
-    for(int n = 0; n<dim; ++n){
-        initial_pos_vector[n] = lower_vertex[n] + 
-            (upper_vertex[n] - lower_vertex[n]) * 0.5;
+   
+    std::vector<Point<dim>> positions(n_particles);    
+    for(auto & position : positions){
+        for(int n = 0; n<dim; ++n){
+            position[n] = lower_vertex[n] + 
+                (upper_vertex[n] - lower_vertex[n]) * Random::RND();
+        }
     }
-    
-    std::vector<Point<dim>> positions(N, initial_pos_vector);
 
     particle_handler.insert_particles(positions);
 
