@@ -143,7 +143,12 @@ namespace PICsimulator{
             return d_cell;
         };
 
+        const Species::N2 & get_species() const {
+            return species;
+        };
+
     private:
+        Species::N2 species;
        
         /// @brief It handles lost particles and reinsert them in the domain.
         /// This function is called when a particle leaves the domain and it 

@@ -87,7 +87,8 @@ namespace PICsimulator {
     public:
         /// @brief Collisions Constructor
         explicit Collisions(Simulator<dim> * sim_):
-            sim(sim_)
+            sim(sim_),
+            N2(sim_->get_species())
         {};
         /// @brief Collisions Destructor
         ~Collisions() = default;
@@ -101,13 +102,13 @@ namespace PICsimulator {
         void apply_collisions();
 
         void initialize() {;
-            collision_kernel.set_diameter(sim->get_cell_diameter()/10.0);
-            sigma_cr_max = collision_kernel.compute_cross_section()*MEAN_VELOCITY *2;
+            collision_kernel.set_diameter(N2.get_diameter());
+            sigma_cr_max = collision_kernel.compute_cross_section()*N2.get_mean_velocity() *4;
 
 
             std::cout << "---------- COLLISIONS INFO ------------\n";
             std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
-            std::cout << "sigma cr " << collision_kernel.compute_cross_section()*MEAN_VELOCITY << std::endl;
+            std::cout << "sigma cr " << collision_kernel.compute_cross_section()*N2.get_mean_velocity() << std::endl;
         }
 
     private:
@@ -120,12 +121,13 @@ namespace PICsimulator {
         T collision_kernel;
 
         //// COLLISION PARAMENTERS
+        Species::N2 N2;
 
         /// maximum value between the cross section and the relative velocity
         double sigma_cr_max;
 
         /// weight of computational particles
-        double weight = 5e15;
+        double weight = 100;
         
         //// COLLISION FUNCTIONS
 

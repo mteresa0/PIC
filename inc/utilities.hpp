@@ -32,6 +32,52 @@ static const double MEAN_VELOCITY = 2*DEV_VELOCITY / std::sqrt(2.0/M_PI); // m/s
 namespace PICsimulator {
     using namespace dealii;
 
+    namespace Species {
+
+        class N2 {
+        public:
+            N2() = default;
+            ~N2() = default;
+            N2(const N2 &) = default;
+            N2(N2 &&) = delete;
+            N2 & operator=(const N2 &) = delete;
+            N2 & operator=(N2 &&) = delete;
+
+            double get_mass() const {
+                return computed_mass;
+            }
+
+            unsigned int get_weight() const {
+                return weight;
+            }
+
+            double get_diameter() const {
+                return diameter;
+            }
+
+            double get_std_velocity() const {
+                return BOLTZMANN_K * temperature / real_mass;
+            }
+
+            double get_mean_velocity() const {
+                return 2 * get_std_velocity() / std::sqrt(2.0 / M_PI);
+            }
+
+            double get_free_path() const {
+                return (BOLTZMANN_K * temperature) / (std::sqrt(2) * M_PI * diameter * diameter * pressure);
+            }
+
+        private:
+            double real_mass = 4.65e-26; // kg
+            double charge = 0.0; // C
+            double diameter = 3.0e-10; // m
+            double temperature = 300; // K
+            double pressure = 1e5; // Pa
+            unsigned int weight = 10;
+            double computed_mass = real_mass*weight; // kg
+        };
+    }
+
     
     /// @brief get the velocity of a particle
     /// @param particle particle pointer (particle iterator type).

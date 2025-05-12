@@ -26,7 +26,7 @@ domain_data(domain_data_),
 streaming_algorithm(this),
 collision_handler(this),
 gen(rd()),
-normal_distr(0., DEV_VELOCITY)
+normal_distr(0., species.get_std_velocity())
 {
     particle_handler.signals.particle_lost.connect(
     [this]( const typename Particles::ParticleIterator<dim>         &particle,
@@ -109,7 +109,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
         domain_data.get_lower_vertex(), 
         domain_data.get_upper_vertex());
 
-    triangulation.refine_global(4);
+    triangulation.refine_global(2);
 
     std::cout << " * Grid created * " << std::endl;
     domain_data.print_data_domain();
@@ -223,10 +223,14 @@ void PICsimulator::Simulator<dim>::initialize()
         << cell_volume << std::endl;
     std::cout << "Volume of the domain: " << volume_domain << std::endl;
 
+    std::cout << "--------- species data ---------" << std::endl;
     std::cout << "mean velocity: " 
-        << MEAN_VELOCITY << std::endl;
+        << species.get_mean_velocity() << std::endl;
+    std::cout << "mean free path : " 
+        << species.get_free_path() << std::endl;
+
     std::cout << "time to exit a cell: " 
-        << cell_volume / MEAN_VELOCITY << std::endl;
+        << cell_volume / species.get_mean_velocity() << std::endl;
     std::cout << "time step: " 
         << dt << std::endl;
 
