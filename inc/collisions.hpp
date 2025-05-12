@@ -103,7 +103,7 @@ namespace PICsimulator {
 
         void initialize() {;
             collision_kernel.set_diameter(N2.get_diameter());
-            sigma_cr_max = collision_kernel.compute_cross_section()*N2.get_mean_velocity() *4;
+            sigma_cr_max = collision_kernel.compute_cross_section()*(N2.get_mean_velocity() + 3.0*N2.get_std_velocity());
 
 
             std::cout << "---------- COLLISIONS INFO ------------\n";
@@ -153,29 +153,38 @@ namespace PICsimulator {
         const double dt = sim->get_time_step();
 
         for (const auto & cell: dof_handler.active_cell_iterators())
-        {;
+        {
             particle_index N = ph.n_particles_in_cell(cell);
+
+            // skip cell containing less than 2 particles
             if (N < 2){
                 continue;
             }
-            std::cout << "# particles in cell "<< cell->index() <<" : " << N << std::endl;
+            // std::cout << "# particles in cell "<< cell->index() <<" : " << N << std::endl;
             
+            // get the particles in the cell
             auto pic = ph.particles_in_cell(cell);
+            // get the begin iterator of the particles in the cell
             const auto & pic_begin = pic.begin();            
 
+            // get the volume of the cell
             auto cell_volume = cell->measure();
-            double n = number_density*cell_volume;
+            // double n = number_density*cell_volume;
 
             // compute number of collisions
-            double N_coll = 0.5*N*n*weight*weight*sigma_cr_max*dt;
-            unsigned int int_N_coll = static_cast<unsigned int>(N_coll);
+            double N_coll_max_double = 0.5*N*(N-1)*weight*sigma_cr_max*dt/cell_volume;
+            unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
+            unsigned int N_pair_tested;
+            if (N_coll_max > std::floor(N/2)) {
+                N_pair_tested = std::floor(N/2);
+            } else {
+                N_pair_tested = N_coll_max;
+            }
+            double F_correction = N_coll_max/N_pair_tested;
             
-            std::cout << "# collisions in cell " << cell->index() << " : " << N_coll << " "<< int_N_coll << std::endl;
+            // std::cout << "# collisions in cell " << cell->index() << " : " << N_coll_max << " "<< N_pair_tested  << "  F_corr: "  << F_correction<< std::endl;
 
-            // if (N_coll>0)
-            //     int_N_coll=1;
-
-            for (unsigned int k = 0; k<int_N_coll; )
+            for (unsigned int k = 0; k<N_pair_tested; )
             {
                 // select two particles
                 unsigned int i = Random::RND() * N;
@@ -202,10 +211,14 @@ namespace PICsimulator {
                 double sigma = collision_kernel.compute_cross_section();
         
                 // compute collision probability
-                double P_coll = sigma * cr.norm() / sigma_cr_max;
+                double P_coll = F_correction * sigma * cr.norm() / sigma_cr_max;
 
                 // pick random double [0, 1)
                 double U = Random::RND();
+
+                if(P_coll>1.0){
+                    std::cout << "P>1.0: " << P_coll << std::endl;
+                }
 
                 if (U<P_coll)
                 {
@@ -213,25 +226,19 @@ namespace PICsimulator {
                     velocity_type cr_ = compute_post_collisional_velocity(cr);
 
                     // compute and update new 
-                    std::cout << "\nv_i: " << norm(v_i) ;
-                    std::cout << "         v_j: " << norm(v_j) << std::endl;
+                    // std::cout << "\nv_i: " << norm(v_i) ;
+                    // std::cout << "         v_j: " << norm(v_j) << std::endl;
                     update_velocities(it_i, it_j, cm, cr_);
-                    std::cout <<" sigma*cr =" << sigma * cr.norm() << "  probability = " << P_coll << std::endl;
 
                     ++k;
-                    if (U/P_coll > 1.0)
+                    if ((sigma*cr.norm())/sigma_cr_max > 1.0)
                     {
                         sigma_cr_max = sigma * cr.norm();
+                        std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
                     }
                 }
-                // if (sigma * cr.norm() > sigma_cr_max)
-                // {
-                //     sigma_cr_max = sigma * cr.norm();
-                //     std::cout << "    New max: " << sigma_cr_max << std::endl;
-                // }
             }
         }
-        
     } // end apply_collisions
 
     template <int dim, class T>
@@ -273,8 +280,8 @@ namespace PICsimulator {
         velocity_type v_i_new(cm + cr_ / 2.0);
         velocity_type v_j_new(cm - cr_ / 2.0);
 
-        std::cout << "v_i_new: " << norm(v_i_new);
-        std::cout << "       v_j_new: " << norm(v_j_new) << std::endl;
+        // std::cout << "v_i_new: " << norm(v_i_new);
+        // std::cout << "       v_j_new: " << norm(v_j_new) << std::endl;
 
         // set the new velocities
         set_velocity(it_i, v_i_new);

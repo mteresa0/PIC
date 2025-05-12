@@ -230,7 +230,7 @@ void PICsimulator::Simulator<dim>::initialize()
         << species.get_free_path() << std::endl;
 
     std::cout << "time to exit a cell: " 
-        << cell_volume / species.get_mean_velocity() << std::endl;
+        << d_cell / species.get_mean_velocity() << std::endl;
     std::cout << "time step: " 
         << dt << std::endl;
 
