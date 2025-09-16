@@ -143,7 +143,7 @@ namespace PICsimulator{
             return d_cell;
         };
 
-        const Species::N2 & get_species() const {
+        const Species::ChemicalSpecies & get_species() const {
             return species;
         };
 

@@ -1,13 +1,14 @@
 /**
  * @file collisions.hpp
  * @author Maria Teresa Cazzola 
- * @brief 
+ * @brief Collisions kernels (HardShpere, ) and the collision algorithm are implemented here.
  * @version 0.1
  * @date 2025-04-29
  * 
  * @copyright Copyright (c) 2025
  * 
  */
+
 #ifndef COLLISIONS_HPP
 #define COLLISIONS_HPP
 
@@ -19,22 +20,24 @@ namespace PICsimulator {
 
     using namespace dealii;
 
-    enum class CollisionType {
-        HS,     // hard sphere
-        VHS,    // variable hard sphere
-        VSS,    // variable soft sphere
-        INVALID
-    };
-
+   /// base class for different collisions algorithms.
     template<int dim>
     class CollisionKernel {
     public:
+        /// CollisionKernel construtor
         CollisionKernel() = default;
+        /// CollisionKernel destructor
         ~CollisionKernel() = default;
 
+        /// compute cross section method (pure virtual)
         virtual double compute_cross_section(/*const Point<dim> & */) const = 0;
+
+        /// compute deflaction angle chi
         virtual double get_chi(/*const Point<dim> & */) const = 0;
+
+        /// compute deflation angle epsilon
         virtual double get_epsilon() const = 0;
+
     }; // end CollisionKernel
 
     template<int dim>
@@ -46,35 +49,35 @@ namespace PICsimulator {
         /// HardSphere destructor
         ~HardSphere() = default;
 
-        /// compute cross section
+        /// @brief Compute the cross section
+        /// @details Different implementation for 2d and 3d
         double compute_cross_section(/*const Point<dim> & relative velocity*/) const override;
 
-        /// setter for the diameter
+        /// @brief Setter for the diameter
         void set_diameter(const double & d12_){
             d12 = d12_;
         }
 
-        /// compute cosine of the deflection angle chi
+        /// @brief Compute deflection angle chi.
+        /// @details the cosine is randomly picked for a uniform distribution from -1 to 1 and then the angle is computed through the acos operator.
         double get_chi(/*const Point<dim> & relative velocity*/) const override{
             return std::acos(Random::RND()*2.0 - 1.0);
         }
 
-        /// compute the deflection angle epsilon
+        /// @brief Compute the deflection angle epsilon
+        /// @details The angle is randomly pick for an uniform distribution between -PI and PI.
         double get_epsilon() const override{
-            return Random::RND()*2.0*M_PI-1.0;
+            return (Random::RND()*2.0-1.0)*M_PI;
         }
 
     private:
-        /// diameter of the particles
+
+        /// Diameter of the particles
         double d12;
+
     }; // end HardSphere
 
     /// @brief Manages particle collisions within a simulation.
-    /// @details The central function, `apply_collisions()`, iterates through each cell, 
-    /// estimates the number of potential collisions, and randomly selects particle pairs. 
-    /// For each pair, a collision probability is calculated. If this probability exceeds 
-    /// a randomly generated value, the particles' velocities are updated based on the 
-    /// provided collision kernel.
     /// @tparam dim spatial dimension
     /// @tparam T collision kernel class used to compute cross section and deflection angle
     template<int dim, class T>
@@ -88,27 +91,35 @@ namespace PICsimulator {
         /// @brief Collisions Constructor
         explicit Collisions(Simulator<dim> * sim_):
             sim(sim_),
-            N2(sim_->get_species())
+            data_species(sim_->get_species())
         {};
         /// @brief Collisions Destructor
         ~Collisions() = default;
 
-        /// @brief apply collisions
+        /// @brief Run the collision algorithm.
         /// @details This function iterates through each cell in the simulation,
-        /// estimates the number of potential collisions, and randomly selects
-        /// particle pairs. For each pair, a collision probability is calculated.
-        /// If this probability exceeds a randomly generated value, the particles'
-        /// velocities are updated based on the provided collision kernel.
+        /// estimates the number of potential collisions and randomly selects
+        /// particle pairs. For each pair the collision probability is calculated.
+        /// According to this probability the particle velocities are updated based
+        /// on the proveded `collision_kernel`
         void apply_collisions();
 
+        /// @brief initialize collision framework
+        /// @details setup collision kernel and inititialize `sigma_cr_max`. Printing initial collision info.
         void initialize() {;
-            collision_kernel.set_diameter(N2.get_diameter());
-            sigma_cr_max = collision_kernel.compute_cross_section()*(N2.get_mean_velocity() + 3.0*N2.get_std_velocity());
-
+            // setup kernel
+            collision_kernel.set_diameter(data_species.get_diameter());
+            // initialize `sigma_cr_max`
+            sigma_cr_max = collision_kernel.compute_cross_section()*(data_species.get_mean_velocity() + 3.0*data_species.get_std_velocity())*100;
+            /* 
+            max velocity is computed as:
+                v_max = v_mean + 3*v_std
+            This value represents the 99.87th percentile for a velocity drawn from a normal distribution (which is not)
+            */
 
             std::cout << "---------- COLLISIONS INFO ------------\n";
-            std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
-            std::cout << "sigma cr " << collision_kernel.compute_cross_section()*N2.get_mean_velocity() << std::endl;
+            std::cout << "sigma_cr_max:    " << sigma_cr_max << std::endl;
+            std::cout << "sigma cr mean:   " << collision_kernel.compute_cross_section()*data_species.get_mean_velocity() << std::endl;
         }
 
     private:
@@ -121,7 +132,9 @@ namespace PICsimulator {
         T collision_kernel;
 
         //// COLLISION PARAMENTERS
-        Species::N2 N2;
+        
+        /// species
+        Species::ChemicalSpecies data_species;
 
         /// maximum value between the cross section and the relative velocity
         double sigma_cr_max;
@@ -172,7 +185,7 @@ namespace PICsimulator {
             // double n = number_density*cell_volume;
 
             // compute number of collisions
-            double N_coll_max_double = 0.5*N*(N-1)*weight*sigma_cr_max*dt/cell_volume;
+            double N_coll_max_double = 0.5*N*number_density*weight*sigma_cr_max*dt;
             unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
             unsigned int N_pair_tested;
             if (N_coll_max > std::floor(N/2)) {
@@ -187,10 +200,10 @@ namespace PICsimulator {
             for (unsigned int k = 0; k<N_pair_tested; )
             {
                 // select two particles
-                unsigned int i = Random::RND() * N;
-                unsigned int j = Random::RND() * N;
+                unsigned int i = static_cast<unsigned int>(std::floor(Random::RND() * N + 0.5));
+                unsigned int j = static_cast<unsigned int>(std::floor(Random::RND() * N + 0.5));
                 while (i==j) {
-                    j = Random::RND() * N;
+                    j = static_cast<unsigned int>(std::floor(Random::RND() * N + 0.5));
                 }
 
                 // get the two particles
@@ -211,13 +224,13 @@ namespace PICsimulator {
                 double sigma = collision_kernel.compute_cross_section();
         
                 // compute collision probability
-                double P_coll = F_correction * sigma * cr.norm() / sigma_cr_max;
+                double P_coll = (F_correction * sigma * cr.norm() )/ sigma_cr_max;
 
                 // pick random double [0, 1)
                 double U = Random::RND();
 
                 if(P_coll>1.0){
-                    std::cout << "P>1.0: " << P_coll << std::endl;
+                    std::cout << "P>1.0: " << P_coll << "      " << sigma * cr.norm() << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
                 }
 
                 if (U<P_coll)
@@ -231,7 +244,8 @@ namespace PICsimulator {
                     update_velocities(it_i, it_j, cm, cr_);
 
                     ++k;
-                    if ((sigma*cr.norm())/sigma_cr_max > 1.0)
+
+                    if (P_coll>1)
                     {
                         sigma_cr_max = sigma * cr.norm();
                         std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
@@ -288,12 +302,16 @@ namespace PICsimulator {
         set_velocity(it_j, v_j_new);
     }
 
+    /// compute the cross section.
+    /// @details in 2D the cross section is the diameter
     template<>
     inline double HardSphere<2>::compute_cross_section() const
     {
         return d12;
     }
 
+    /// compute the cross section.
+    /// @details in 3D the cross section is the circle area of the given diameter
     template<>
     inline double HardSphere<3>::compute_cross_section() const
     {
