@@ -110,7 +110,7 @@ namespace PICsimulator {
             // setup kernel
             collision_kernel.set_diameter(data_species.get_diameter());
             // initialize `sigma_cr_max`
-            sigma_cr_max = collision_kernel.compute_cross_section()*(data_species.get_mean_velocity() + 3.0*data_species.get_std_velocity())*100;
+            sigma_cr_max = collision_kernel.compute_cross_section()*(data_species.get_mean_velocity() + 3.0*data_species.get_std_velocity());
             /* 
             max velocity is computed as:
                 v_max = v_mean + 3*v_std
@@ -187,10 +187,8 @@ namespace PICsimulator {
             // compute number of collisions
             double N_coll_max_double = 0.5*N*number_density*weight*sigma_cr_max*dt;
             unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
-            unsigned int N_pair_tested;
-            if (N_coll_max > std::floor(N/2)) {
-                N_pair_tested = std::floor(N/2);
-            } else {
+            unsigned int N_pair_tested = std::floor(N/2);
+            if (N_pair_tested > N_coll_max) {
                 N_pair_tested = N_coll_max;
             }
             double F_correction = N_coll_max/N_pair_tested;
@@ -200,10 +198,10 @@ namespace PICsimulator {
             for (unsigned int k = 0; k<N_pair_tested; )
             {
                 // select two particles
-                unsigned int i = static_cast<unsigned int>(std::floor(Random::RND() * N + 0.5));
-                unsigned int j = static_cast<unsigned int>(std::floor(Random::RND() * N + 0.5));
+                unsigned int i = static_cast<unsigned int>(std::floor(Random::RND() * N));
+                unsigned int j = static_cast<unsigned int>(std::floor(Random::RND() * N));
                 while (i==j) {
-                    j = static_cast<unsigned int>(std::floor(Random::RND() * N + 0.5));
+                    j = static_cast<unsigned int>(std::floor(Random::RND() * N));
                 }
 
                 // get the two particles
@@ -216,6 +214,7 @@ namespace PICsimulator {
 
                 // compute the relative velocity
                 velocity_type cr(v_i - v_j);
+                const double cr_norm(cr.norm());
 
                 // compute system velocity
                 velocity_type cm((v_i + v_j) / 2.0);
@@ -224,30 +223,28 @@ namespace PICsimulator {
                 double sigma = collision_kernel.compute_cross_section();
         
                 // compute collision probability
-                double P_coll = (F_correction * sigma * cr.norm() )/ sigma_cr_max;
+                double P_coll = (F_correction * sigma * cr_norm )/ sigma_cr_max;
 
                 // pick random double [0, 1)
                 double U = Random::RND();
 
                 if(P_coll>1.0){
-                    std::cout << "P>1.0: " << P_coll << "      " << sigma * cr.norm() << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
+                    std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
                 }
 
-                if (U<P_coll)
+                if (U < P_coll)
                 {
                     // compute post collisional relative velocity
                     velocity_type cr_ = compute_post_collisional_velocity(cr);
 
-                    // compute and update new 
-                    // std::cout << "\nv_i: " << norm(v_i) ;
-                    // std::cout << "         v_j: " << norm(v_j) << std::endl;
+                    // compute and update new velocities
                     update_velocities(it_i, it_j, cm, cr_);
 
                     ++k;
 
-                    if (P_coll>1)
+                    if (sigma * cr_norm > sigma_cr_max)
                     {
-                        sigma_cr_max = sigma * cr.norm();
+                        sigma_cr_max = sigma * cr_norm;
                         std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
                     }
                 }
