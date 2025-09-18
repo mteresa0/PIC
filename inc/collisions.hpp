@@ -139,8 +139,8 @@ namespace PICsimulator {
         /// maximum value between the cross section and the relative velocity
         double sigma_cr_max;
 
-        /// weight of computational particles
-        double weight = 100;
+        // /// weight of computational particles
+        // double weight = 100;
         
         //// COLLISION FUNCTIONS
 
@@ -165,6 +165,8 @@ namespace PICsimulator {
         const double number_density = sim->get_number_density();
         const double dt = sim->get_time_step();
 
+        const double weight = data_species.get_weight();
+
         for (const auto & cell: dof_handler.active_cell_iterators())
         {
             particle_index N = ph.n_particles_in_cell(cell);
@@ -185,7 +187,9 @@ namespace PICsimulator {
             // double n = number_density*cell_volume;
 
             // compute number of collisions
-            double N_coll_max_double = 0.5*N*number_density*weight*sigma_cr_max*dt;
+            double N_coll_max_double = 0.5*N*(N-1)*weight*sigma_cr_max*dt / cell_volume;
+            // double N_coll_max_double_ = 0.5*N*number_density*weight*sigma_cr_max*dt;
+            // std::cout << N_coll_max_double <<  "       " << N_coll_max_double_ << std::endl;
             unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
             unsigned int N_pair_tested = std::floor(N/2);
             if (N_pair_tested > N_coll_max) {
@@ -193,7 +197,7 @@ namespace PICsimulator {
             }
             double F_correction = N_coll_max/N_pair_tested;
             
-            // std::cout << "# collisions in cell " << cell->index() << " : " << N_coll_max << " "<< N_pair_tested  << "  F_corr: "  << F_correction<< std::endl;
+            // std::cout << "# collisions in cell " << cell->index() << " : " << N_coll_max << "    "<< N_pair_tested  << "    F_corr: "  << F_correction<< std::endl;
 
             for (unsigned int k = 0; k<N_pair_tested; )
             {
@@ -228,9 +232,9 @@ namespace PICsimulator {
                 // pick random double [0, 1)
                 double U = Random::RND();
 
-                if(P_coll>1.0){
-                    std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
-                }
+                // if(P_coll>1.0){
+                //     std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
+                // }
 
                 if (U < P_coll)
                 {
