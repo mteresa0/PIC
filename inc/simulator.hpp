@@ -30,30 +30,10 @@
 #include "domain.hpp"
 #include "streaming.hpp"
 #include "collisions.hpp"
-#include <chrono>
-
-static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME;
-static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME_CUMULATIVE_CHRONO;
-static double DT, DT_CUMULATIVE_CHRONO;
-
-#define TIC() STARTING_TIME = std::chrono::high_resolution_clock::now();
-#define TOC(){                                                                  \
-    auto now = std::chrono::high_resolution_clock::now();                       \
-    std::chrono::duration<double> diff = now - STARTING_TIME;                   \
-    DT = diff.count();                                                          \
-}
-
-#define START_CUMULATIVE_CHRONO() {STARTING_TIME_CUMULATIVE_CHRONO = std::chrono::high_resolution_clock::now();}
-#define REINIT_CUMULATIVE_CHRONO() {DT_CUMULATIVE_CHRONO = 0;}
-#define ADD_TIME_CUMULATIVE_CHRONO() {                                          \
-    auto now = std::chrono::high_resolution_clock::now();                       \
-    std::chrono::duration<double> diff = now - STARTING_TIME_CUMULATIVE_CHRONO; \
-    DT_CUMULATIVE_CHRONO += diff.count();                                       \
-}
-
 
 namespace PICsimulator{
-    
+
+    // using namespace Timers;    
     using namespace dealii;
 
     /// @brief default domain for the simulation. Lower and upper vertices are

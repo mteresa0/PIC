@@ -300,17 +300,17 @@ namespace PICsimulator::TestSimulators
         // get particle iterator and starting data
         auto it = particle_handler.begin();
 
-        // make sure to reset DT variable
-        REINIT_CUMULATIVE_CHRONO();
+        // initialize timers
+        Timers::Cumulative_Timer timer_streaming;
 
         unsigned int NT = this->T/this->dt;
         for (unsigned int i = 0; i<NT; ++i)
         {
             // one-step iteration update using the implemented algorithm (verlet)
             // also timing it
-            START_CUMULATIVE_CHRONO();
+            timer_streaming.tic();
             streaming_algorithm.advance(particle_handler);
-            ADD_TIME_CUMULATIVE_CHRONO();
+            timer_streaming.toc();
 
             current_time += this->dt;
 
@@ -324,7 +324,7 @@ namespace PICsimulator::TestSimulators
         // printing the errors and the elipsed time of the simulation
         std::cout << "\ntotal location error: " << location_error << std::endl;
         std::cout << "total velocity error: " << velocity_error << std::endl;
-        std::cout << "\nstreaming time:       " << DT_CUMULATIVE_CHRONO << "\n\n"<< std::endl;
+        std::cout << "\nstreaming time:       " << timer_streaming.get_dt() << "\n\n"<< std::endl;
     
     }
 

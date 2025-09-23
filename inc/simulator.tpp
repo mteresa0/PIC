@@ -48,10 +48,13 @@ void PICsimulator::Simulator<dim>::run() {
 
     std::vector<double> total_kinetic_energy(NT, 0);
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
+
+    Timers::Timer timer;
+    Timers::Cumulative_Timer sorting_timer;
+    Timers::Cumulative_Timer collision_timer;
      
     std::cout << "---------- starting simulation ----------" << std::endl;
-    REINIT_CUMULATIVE_CHRONO();
-    TIC();
+    timer.tic();
 
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
@@ -61,8 +64,9 @@ void PICsimulator::Simulator<dim>::run() {
         std::cout << "\ntime step: " << i << std::endl;
         // std::cout << "# number of particles: " 
         //     << particle_handler.n_global_particles() << std::endl;
+        collision_timer.tic();
         collision_handler.apply_collisions();
-
+        collision_timer.toc();
         {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
             {
@@ -80,19 +84,23 @@ void PICsimulator::Simulator<dim>::run() {
         total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
 
         // sort particles into cells
-        START_CUMULATIVE_CHRONO();
+        sorting_timer.tic();
         particle_handler.sort_particles_into_subdomains_and_cells();
-        ADD_TIME_CUMULATIVE_CHRONO();
+        sorting_timer.toc();
 
         // print data to files
         print_data_to_files(i);
     } // end of time loop
 
-    TOC();
+    {
+    double sim_time = timer.toc();
 
-    std::cout << "Simulation completed in " << DT      << " seconds" << std::endl; 
-    std::cout << "sort particles time:    " << DT_CUMULATIVE_CHRONO << " seconds" << std::endl;
-
+    std::cout << "Simulation completed in    " << sim_time    << " seconds" << std::endl; 
+    std::cout << "sorting particles time:    ";
+    sorting_timer.print(sim_time);
+    std::cout << "collisions time:           ";
+    collision_timer.print(sim_time);
+    }
     // print kinetic energies into csv
     std::ofstream output("outputs/total_kinetic_energy.csv");
     output << "time, total_kinetic_energy, sum_particles_kinetic_energy\n";

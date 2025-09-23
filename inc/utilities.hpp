@@ -16,7 +16,8 @@
 #include <deal.II/particles/particle_handler.h>
 #include <deal.II/particles/particle_iterator.h>
 #include <deal.II/particles/particle_accessor.h>
-
+#include <chrono>
+#include <iomanip> 
 
 /// Boltzmann constant in J/K
 static const double BOLTZMANN_K = 1.380649e-23;  // J/K
@@ -30,6 +31,147 @@ static const double ELECTR_MASS = 1.9093837e-31; // kg
 
 static const double MEAN_VELOCITY = 2*DEV_VELOCITY / std::sqrt(2.0/M_PI); // m/s
 */
+namespace Timers {
+
+    // static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME;
+    // static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME_CUMULATIVE_CHRONO;
+    // static double DT, DT_CUMULATIVE_CHRONO;
+
+    /*
+    // #define TIC() STARTING_TIME = std::chrono::high_resolution_clock::now();
+    // #define TOC(){                                                                  \
+    //     auto now = std::chrono::high_resolution_clock::now();                       \
+    //     std::chrono::duration<double> diff = now - STARTING_TIME;                   \
+    //     DT = diff.count();                                                          \
+    // }
+
+    // #define START_CUMULATIVE_CHRONO() {STARTING_TIME_CUMULATIVE_CHRONO = std::chrono::high_resolution_clock::now();}
+    // #define REINIT_CUMULATIVE_CHRONO() {DT_CUMULATIVE_CHRONO = 0;}
+    // #define ADD_TIME_CUMULATIVE_CHRONO() {                                          \
+    //     auto now = std::chrono::high_resolution_clock::now();                       \
+    //     std::chrono::duration<double> diff = now - STARTING_TIME_CUMULATIVE_CHRONO; \
+    //     DT_CUMULATIVE_CHRONO += diff.count();                                       \
+    // }
+    */
+
+    /// @brief Classic Timer class.
+    /// There are implemented the classic tic toc functions
+    class Timer {
+    public:
+        /// @brief Timer constructor
+        Timer(): dt(0.0), is_started(false) {};
+
+        /// @brief starting timer
+        /// @details call this function before the code snippet you want to time.
+        /// `start` stores the time when `tic` have been run.
+        void tic() {
+            is_started = true;
+            start = std::chrono::high_resolution_clock::now();
+        }
+
+
+        /// @brief returns the time difference from the last tic in seconds.
+        /// @details place this function after the code snippet you want to time.
+        /// toc returns the duration of time between the calls of `tic' and 'toc`.
+        double toc() {
+            auto now = std::chrono::high_resolution_clock::now();
+
+            if(!is_started) {
+                throw std::logic_error("Call toc() before get_dt()");
+            }
+            
+            std::chrono::duration<double> diff = now - start;
+            dt = diff.count();
+            return dt;
+        }
+
+        /// @brief gets the last time difference measured.
+        double get_dt() {
+            return dt;
+        }
+
+        /// @brief print time elapsed
+        void print() {
+            std::cout << dt << " seconds\n";
+        }
+
+    private:
+        /// stores the time in which tic has been called
+        std::chrono::time_point<std::chrono::high_resolution_clock> start;
+
+        /// stores the time difference (in seconds) between the calls of tic and toc
+        double dt;
+
+        /// bool for state timer
+        bool is_started;
+
+    };
+ 
+    /// @brief Cumultative_Timer class. It can time the elasped time of a code snippet in a loop 
+    /// @details for example, you may want to time the function 'function_to_time' but it is in a for loop:
+    /// for(...) {
+    ///    /* code */
+    ///    function_to time();
+    ///    /* code */
+    /// }
+    /// If you place tic and toc before and after 'function_to_time' you will the total elapsed time
+    class Cumulative_Timer {
+
+    public:
+        Cumulative_Timer(): dt(0.0) {};
+
+        /// @brief Initializes the time difference variable `dt` to 0. 
+        /// if `tic` and `toc` are used in a loop, the timer has to be initialized before.
+        void clean_timer() {
+            dt = 0.0;
+        }
+
+        /// @brief starting timer
+        /// @details call this function before the code snippet you want to time.
+        /// `start` stores the time when `tic` have been run.
+        void tic() {
+            start = std::chrono::high_resolution_clock::now();
+        }
+
+
+        /// @brief returns the time difference from the last tic in seconds.
+        /// @details place this function after the code snippet you want to time.
+        /// toc returns the duration of time between the calls of `tic' and 'toc`.
+        void toc() {
+            auto now = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> diff = now - start;
+            dt += diff.count();
+        }
+
+        /// @brief returns the cumulative elapsed time of the timed code snippet
+        double get_dt() {
+            return dt;
+        }
+
+        /// @brief print dt
+        void print() {
+            std::cout << std::setprecision(6) << dt << " seconds\n";
+        }
+
+        /// @brief print dt and percentage wrt to total simulation time.
+        void print(const double &sim_time) {
+            std::cout << std::fixed;
+            std::cout << std::setprecision(6) << dt << " seconds    ["
+            << std::setprecision(3) << dt/sim_time*100 << "%]" << std::endl;
+        }
+
+    private:
+
+        /// stores the time in which tic has been called
+        std::chrono::time_point<std::chrono::high_resolution_clock> start;
+
+        /// stores the time difference (in seconds) between the calls of tic and toc
+        double dt;
+
+    };
+
+}
+
 
 namespace PICsimulator {
     using namespace dealii;
