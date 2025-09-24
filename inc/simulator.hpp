@@ -152,9 +152,8 @@ namespace PICsimulator{
         const double dt;
         /// @brief total simulation time
         const double T;
-        /// @brief particle mass
-        const double particle_mass = ELECTR_MASS;
-        /// @brief mean cell volume
+
+        /// @brief cell volume
         double cell_volume;
         double number_density;
 

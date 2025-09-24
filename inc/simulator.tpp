@@ -74,14 +74,14 @@ void PICsimulator::Simulator<dim>::run() {
                 Tensor<1, dim> velocity(get_velocity_from_properties(it));
                 
                 // save kinetic energy per particle
-                double ke = particle_mass * velocity.norm();
+                double ke = species.get_mass() * velocity.norm();
                 sum_particles_kinetic_energy[i] += ke;
                 sum_vels += velocity;
 
             }
         }
 
-        total_kinetic_energy[i] = particle_handler.n_global_particles() * particle_mass * sum_vels.norm();
+        total_kinetic_energy[i] = particle_handler.n_global_particles() * species.get_mass() * sum_vels.norm();
 
         // sort particles into cells
         sorting_timer.tic();
