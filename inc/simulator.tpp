@@ -49,6 +49,7 @@ void PICsimulator::Simulator<dim>::run() {
     std::vector<double> total_kinetic_energy(NT, 0);
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
 
+    /// \todo add option to not run timers
     Timers::Timer timer;
     Timers::Cumulative_Timer sorting_timer;
     Timers::Cumulative_Timer collision_timer;
@@ -92,6 +93,7 @@ void PICsimulator::Simulator<dim>::run() {
         print_data_to_files(i);
     } // end of time loop
 
+    // printing elapsed times
     {
     double sim_time = timer.toc();
 
@@ -101,6 +103,7 @@ void PICsimulator::Simulator<dim>::run() {
     std::cout << "collisions time:           ";
     collision_timer.print(sim_time);
     }
+
     // print kinetic energies into csv
     std::ofstream output("outputs/total_kinetic_energy.csv");
     output << "time, total_kinetic_energy, sum_particles_kinetic_energy\n";
@@ -131,12 +134,11 @@ void PICsimulator::Simulator<dim>::make_grid() {
 template<int dim>
 void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
-    // int N = n_particles; // move it from here please!!!
-
+    // get upper and lower vertex
     auto upper_vertex = domain_data.get_upper_vertex();
     auto lower_vertex = domain_data.get_lower_vertex();
 
-   
+   // generate random position for each particle. store positions in a vector
     std::vector<Point<dim>> positions(n_particles);    
     for(auto & position : positions){
         for(int n = 0; n<dim; ++n){
@@ -145,18 +147,23 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
         }
     }
 
+    // insert particles by location
     particle_handler.insert_particles(positions);
 
     // set velocities
     set_initial_velocity();
 
+    // printing message
     std::cout << "Inserted " << particle_handler.n_global_particles() << " particles \n";
 };
 
 template<int dim>
 void PICsimulator::Simulator<dim>::set_initial_velocity()
 {
+    // initialize velocity 
     Tensor<1, dim> initial_velocity;
+
+    // for each particle draw all the velocity components and set the velocity of the particle
     for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
         for(int d = 0; d<dim; ++d){
             initial_velocity[d] = normal_distr(gen);
@@ -171,16 +178,21 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     const typename Particles::ParticleIterator<dim>         &particle,
     const typename Triangulation<dim>::active_cell_iterator &cell) 
 {
+    // get position and velocity of the particle. initialize new velocity variable
     Point<dim> location(particle->get_location());
     Tensor<1, dim> velocity(get_velocity_from_properties(particle));
     std::vector<double> new_velocity(dim);
 
+    // run out_of_boundaries algorithm. it depends on the type of domain.
+    // it will update the location and velocity given.
     domain_data.out_of_boundaries(location, velocity);
 
+    // move the new velocity in the vector form bc the particle handler wants it this way.
     for(int d = 0; d<dim; ++d){
         new_velocity[d] = velocity[d];
     }
 
+    // insert the lost particle 
     particle_handler.insert_particle(
         location,
         mapping.transform_real_to_unit_cell(cell, location),
@@ -207,6 +219,7 @@ void PICsimulator::Simulator<dim>::initialize()
     make_grid();
     insert_particles_dummy();
 
+    // compute and store data for grid and particles
     auto n_cells = triangulation.n_active_cells();
     double cell_volume_, volume_domain, particles_per_cell;
     double d_cell;
@@ -221,6 +234,8 @@ void PICsimulator::Simulator<dim>::initialize()
 
     cell_volume = volume_domain/n_cells;
 
+    // printing data
+    {
     std::cout << "Number density: " << number_density << " #/m^dim"<< std::endl;
     std::cout << "Number of particles: " << n_particles << std::endl;
     std::cout << "Number of cells: " << n_cells << std::endl;
@@ -241,7 +256,9 @@ void PICsimulator::Simulator<dim>::initialize()
         << d_cell / species.get_mean_velocity() << std::endl;
     std::cout << "time step: " 
         << dt << std::endl;
+    }
 
+    // initialize collisions
     collision_handler.initialize();
 
     initialized = true;

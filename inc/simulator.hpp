@@ -78,6 +78,7 @@ namespace PICsimulator{
             const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>());
         
         /// @brief run the simulation
+        /// This is the method in which the simulatotion loop is defined.
         void run();   
 
         /// @brief Destructor of the Simulator class
@@ -106,28 +107,39 @@ namespace PICsimulator{
 
         friend class Streaming<dim, StreamingAlgorithm::VERLET>;
 
+        /// @brief get the volume of the cell.
+        /// In 2D it will return the surface of the cell.
+        /// For now, all the cell are of the same size.
         double get_cell_volume() const {
             return cell_volume;
         };
 
+        /// @brief get the number density
+        /// @return (# particle in the simulation) / (volume of the domain)
         double get_number_density() const {
             return number_density;
         };
 
+        /// @brief get the simulation timestep
         double get_time_step() const {
             return dt;
         };
 
+        /// @brief get the diameter of a cell
+        /// For now, by construction all the cell have the same diameter
         double get_cell_diameter() const {
             double d_cell = dof_handler.begin()->diameter();
             return d_cell;
         };
 
+        /// @brief get the simulated spicies 
         const Species::ChemicalSpecies & get_species() const {
             return species;
         };
 
     private:
+        /// species
+        /// \todo pass this by constructor and change it to the base class
         Species::N2 species;
        
         /// @brief It handles lost particles and reinsert them in the domain.
@@ -140,21 +152,26 @@ namespace PICsimulator{
             const typename Particles::ParticleIterator<dim>         &particle,
             const typename Triangulation<dim>::active_cell_iterator &cell);
 
-        //// INITIALIZATION VARIABLES
+        //// INITIALIZATION PARAMETERS
 
         /// @brief flag to check if the simulator is initialized
         bool initialized = false;
 
         // simulation parameters
+
         /// @brief number of particles in the simulation
         const unsigned int n_particles;
+
         /// @brief time step
         const double dt;
+
         /// @brief total simulation time
         const double T;
 
         /// @brief cell volume
         double cell_volume;
+
+        /// @brief number density (# particles / tot. volume)
         double number_density;
 
         //// INIZIALIZATION FUNCTIONS
@@ -167,7 +184,8 @@ namespace PICsimulator{
 
         //// SIMULATION FUNCTIONS
 
-        /// @brief evaluate acceleration (TODO)
+        /// @brief evaluate acceleration 
+        /// \todo implement this function
         location_type evaluate_acceleration(){return location_type();};
 
         //// PRINTING FUNCTIONS
@@ -181,10 +199,13 @@ namespace PICsimulator{
         // dealii objects
         /// @brief triangulation of the domain
         dealii::Triangulation<dim>              triangulation;
+
         /// @brief finite element mapping
         const dealii::MappingQ<dim>             mapping;
+
         /// @brief finite element object
         DoFHandler<dim>                         dof_handler;
+
         /// @brief particle handler object. It handles the particles and their properties.
         dealii::Particles::ParticleHandler<dim> particle_handler;
         
@@ -207,10 +228,13 @@ namespace PICsimulator{
         void set_initial_velocity();
 
         // random generators for maxwell distribution of velocity
+        /// \todo move this into utilities.hpp
         /// @brief random device
         std::random_device rd;
+
         /// @brief random number generator
         std::mt19937 gen; 
+
         /// @brief normal distribution for velocity
         std::normal_distribution<double> normal_distr;
 
