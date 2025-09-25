@@ -20,19 +20,25 @@ namespace PICsimulator{
 
     using namespace dealii;
     
+    // forward declaration of Simulator
     template<int dim>
     class Simulator;
 
+    /// @brief manges the streaming algorithm.
+    /// @details the developed streaming algorithm is the Verlet algorithm.
+    /// At each timestep (n), the simulator call for `advance` method which 
+    /// updates the particle locations and velocities at the next timestep  
+    /// according to the Verlet algorithm.
     template<int dim>
     class Streaming {
 
+        // retireve type from simulator class
         using velocity_type = typename Simulator<dim>::velocity_type;
         using location_type = typename Simulator<dim>::location_type;
 
     public:
         /// constructor
         /// @param simulator_ simulator pointer
-        /// @param dt time step
         explicit Streaming(Simulator<dim> *simulator_) : 
             sim(simulator_) ,
             dt(simulator_->dt), 
@@ -40,6 +46,10 @@ namespace PICsimulator{
         {};
 
         /// constructor for testing
+        /// @param dt_ timestep
+        /// @param acc_fun_ acceleration function to test
+        /// the simulator pointer is not needed since this construct should 
+        /// be used only for testing the streaming algorithm.
         explicit Streaming(const double &dt_, 
             const std::function<Point<dim>()> &acc_fun_) : 
             sim(nullptr) ,
@@ -47,7 +57,7 @@ namespace PICsimulator{
             acc_fun(acc_fun_)
         {};
 
-        /// advance the particles
+        /// advance the particles according to the Verlet algorithm.
         /// @param ph particle handler
         void advance(typename Particles::ParticleHandler<dim> & ph);
 
@@ -60,6 +70,7 @@ namespace PICsimulator{
 
         /// update location loop according to the Verlet algorithm
         /// @param ph particle handler
+        /// actually it updates the velocities too to the n+1/2 timestep
         void update_location(
             typename Particles::ParticleHandler<dim> & ph) const;
 

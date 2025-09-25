@@ -22,6 +22,9 @@ namespace PICsimulator::TestSimulators
 {
     using namespace dealii;
 
+    /// @brief Base class for testing different types of motions.
+    /// All the methods are virtual.
+    /// @tparam dim 
     template<int dim>
     class BaseMotion {
     public:
@@ -47,9 +50,13 @@ namespace PICsimulator::TestSimulators
         virtual Point<dim> get_acc(const double &t) const = 0;
     };
 
+    /// @brief represents a constant velocity particle motion
     template<int dim>
     class ConstantVelocity : public BaseMotion<dim> {
     public:
+        /// @brief ConstantVelocity constructor
+        /// @param velocity_ constant velocity of the particle
+        /// @param initial_location_ initial location of the particle
         ConstantVelocity(
             const Point<dim> &velocity_,
             const Point<dim> &initial_location_):
@@ -57,8 +64,14 @@ namespace PICsimulator::TestSimulators
             initial_location(initial_location_)
         {};
 
+        /// @brief get location
+        /// @param t 
         Point<dim> get_loc(const double &t) const override;
+        /// @brief get velocity
+        /// @param t 
         Point<dim> get_vel(const double &t) const override;
+        /// @brief get acceleration
+        /// @param t 
         Point<dim> get_acc(const double &t) const override;
 
     private:
@@ -66,16 +79,28 @@ namespace PICsimulator::TestSimulators
         const Point<dim> initial_location;
     };
 
+    /// @brief represents a periodic particle motion
     template<int dim>
     class PeriodicMotion : public BaseMotion<dim> {  
     public: 
+        /// @brief PeriodicMotion constructor. 
+        /// Initial location and angular velocity are hardcoded.
         PeriodicMotion(){};     
+        /// @brief get location
+        /// @param t 
         Point<dim> get_loc(const double &t) const override;
+        /// @brief get velocity
+        /// @param t 
         Point<dim> get_vel(const double &t) const override;
+        /// @brief get acceleration
+        /// @param t 
         Point<dim> get_acc(const double &t) const override;
     };
 
     /// @brief computes convergence rates for the location and velocity errors
+    /// @details It runs multiple TestStreaming with difference timesteps. It 
+    /// collects the errors and then computes the convergence rate. Errors and 
+    /// convergence rates are printed and saved in "outputs/errors.csv"
     /// @tparam dim template parameter for the dimension
     /// @param motion motion object
     /// @param dts vector of time steps
@@ -85,13 +110,22 @@ namespace PICsimulator::TestSimulators
                             const std::vector<double> &dts,
                             const double &total_time);
 
+    /// @brief TestStreaming class. This class is created as a proto simulator
+    /// adapted to test the correctness and the convergence of the streaming
+    /// algorithm. It adds 1 particles and computes the difference between the 
+    /// true location and velocity of the particle to the computed ones by the 
+    /// streaming algorithm.
     template<int dim>
     class TestStreaming{
     public:
+        // getting types from Simulator class
         using velocity_type = typename Simulator<dim>::velocity_type;
         using location_type = typename Simulator<dim>::location_type;
 
         /// @brief Constructor
+        /// @param dt_ timestep
+        /// @param T_ total simulation time
+        /// @param motion_ particle motion data
         TestStreaming(
             const double &dt_, 
             const double &T_,
@@ -131,7 +165,7 @@ namespace PICsimulator::TestSimulators
         double get_vel_error() const { return velocity_error; }
 
     private:
-        const double dt; /// time step
+        const double dt; /// time step \todo move this outside so you dont have to create multiple istances of TestStreaming when running `test_convergence`
         const double T; /// total simulation time
 
         double location_error = 0; /// location error
