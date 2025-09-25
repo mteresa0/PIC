@@ -19,21 +19,12 @@
 namespace PICsimulator{
 
     using namespace dealii;
-
-    enum class StreamingAlgorithm {
-        VERLET,
-        LEAPFROG
-    };
     
     template<int dim>
     class Simulator;
 
-
-    template<int dim, StreamingAlgorithm sa>
-    class Streaming;
-
     template<int dim>
-    class Streaming<dim, StreamingAlgorithm::VERLET> {
+    class Streaming {
 
         using velocity_type = typename Simulator<dim>::velocity_type;
         using location_type = typename Simulator<dim>::location_type;
@@ -81,57 +72,12 @@ namespace PICsimulator{
         std::function<location_type()> acc_fun;
     };
 
-    template<int dim>
-    class Streaming<dim, StreamingAlgorithm::LEAPFROG> {
-
-        using velocity_type = typename Simulator<dim>::velocity_type;
-        using location_type = typename Simulator<dim>::location_type;
-
-    public:
-        /// constructor
-        /// @param simulator_ simulator pointer
-        /// @param dt time step
-        explicit Streaming(Simulator<dim> *simulator_) : 
-            sim(simulator_) ,
-            dt(simulator_->dt), 
-            acc_fun(std::bind(&Simulator<dim>::evaluate_acceleration, simulator_))
-        {};
-
-        /// constructor for testing
-        explicit Streaming(const double &dt_, 
-            const std::function<Point<dim>()> &acc_fun_) : 
-            sim(nullptr) ,
-            dt(dt_),
-            acc_fun(acc_fun_)
-        {};
-
-        /// print the streaming algorithm
-        void print() const {
-            sim->domain_data.print_data_domain();
-            std::cout << "Streaming algorithm: LEAPFROG" << std::endl;
-        };
-
-        /// advance the particles according to the Leapfrog algorithm
-        /// @param ph particle handler
-        void advance(typename Particles::ParticleHandler<dim> & ph);
-
-    private:
-        /// simulator pointer
-        Simulator<dim> *sim;
-
-        /// time step
-        const double dt;
-
-        /// acceleration function
-        std::function<location_type()> acc_fun;
-    };
-
     /************
      DEFINITIONS
     *************/
 
     template<int dim>
-    inline void Streaming<dim, StreamingAlgorithm::VERLET>::advance(
+    void Streaming<dim>::advance(
         typename Particles::ParticleHandler<dim> & ph)
     {
         // update location
@@ -145,32 +91,7 @@ namespace PICsimulator{
     }
 
     template<int dim>
-    inline void Streaming<dim, StreamingAlgorithm::LEAPFROG>::advance(
-        typename Particles::ParticleHandler<dim> & ph)
-    {
-        // initialize acceleration
-        location_type acceleration;
-
-        // iterate over particles
-        for (auto it = ph.begin(); it!=ph.end(); ++it)
-        {
-            // get location and velocity
-            location_type location(it->get_location());
-            velocity_type velocity(get_velocity_from_properties(it));
-
-            // get acceleration
-            acceleration = acc_fun();
-
-            // update velocity
-            velocity += dt*acceleration;
-            set_velocity(it, velocity);
-            // update locations
-            it->set_location(location + dt*velocity);
-        }
-    }
-
-    template<int dim>
-    inline void Streaming<dim, StreamingAlgorithm::VERLET>::update_location(
+    inline void Streaming<dim>::update_location(
         typename Particles::ParticleHandler<dim> & ph) const
     {
         // initialize acceleration
@@ -196,7 +117,7 @@ namespace PICsimulator{
     }
 
     template<int dim>
-    inline void Streaming<dim, StreamingAlgorithm::VERLET>::update_velocity(
+    inline void Streaming<dim>::update_velocity(
         typename Particles::ParticleHandler<dim> & ph) const
     {
         // initialize acceleration

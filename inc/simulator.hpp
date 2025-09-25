@@ -105,7 +105,7 @@ namespace PICsimulator{
             return dof_handler;
         };
 
-        friend class Streaming<dim, StreamingAlgorithm::VERLET>;
+        friend class Streaming<dim>;
 
         /// @brief get the volume of the cell.
         /// In 2D it will return the surface of the cell.
@@ -215,7 +215,7 @@ namespace PICsimulator{
 
         /// @brief streaming algorithm object. It handles the streaming of the
         /// particles and computes new force field.
-        Streaming<dim, StreamingAlgorithm::VERLET> streaming_algorithm;
+        Streaming<dim> streaming_algorithm;
 
         /// @brief collision object. It handles the collisions of the particles.
         Collisions<dim, HardSphere<dim>> collision_handler;

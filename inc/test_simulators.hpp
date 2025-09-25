@@ -23,9 +23,6 @@ namespace PICsimulator::TestSimulators
     using namespace dealii;
 
     template<int dim>
-    using true_val_fun = Point<dim>(*)(const double &);
-
-    template<int dim>
     class BaseMotion {
     public:
         /// @brief Constructor
@@ -88,7 +85,7 @@ namespace PICsimulator::TestSimulators
                             const std::vector<double> &dts,
                             const double &total_time);
 
-    template<int dim, StreamingAlgorithm SA>
+    template<int dim>
     class TestStreaming{
     public:
         using velocity_type = typename Simulator<dim>::velocity_type;
@@ -143,7 +140,7 @@ namespace PICsimulator::TestSimulators
 
         unsigned int count = 0; /// counts how many times acceleration is called
 
-        Streaming<dim, SA> streaming_algorithm; /// streaming algorithm object
+        Streaming<dim> streaming_algorithm; /// streaming algorithm object
 
         /// @brief initialize grid and particle handler
         void initialize();
@@ -183,11 +180,9 @@ namespace PICsimulator::TestSimulators
         std::vector<double> err_loc(dts.size());
         std::vector<double> err_vel(dts.size());
 
-        constexpr StreamingAlgorithm sa = StreamingAlgorithm::LEAPFROG;
-
         for(unsigned int i = 0; i<dts.size(); ++i)
         {
-            TestStreaming<dim, sa> test_streaming(
+            TestStreaming<dim> test_streaming(
                 dts[i], total_time, motion);
             
             test_streaming.run_test();
@@ -273,8 +268,8 @@ namespace PICsimulator::TestSimulators
         return Point<3>(-std::cos(t), -std::sin(t), 0);
     }
 
-    template <int dim, StreamingAlgorithm SA>
-    inline void TestStreaming<dim, SA>::print_errors_to_file(
+    template <int dim>
+    inline void TestStreaming<dim>::print_errors_to_file(
         const std::string &filename, 
         const bool &overwrite)
     {
@@ -291,8 +286,8 @@ namespace PICsimulator::TestSimulators
             file.close();
     };
 
-    template <int dim, StreamingAlgorithm SA>
-    inline void TestSimulators::TestStreaming<dim, SA>::run_test()
+    template <int dim>
+    inline void TestSimulators::TestStreaming<dim>::run_test()
     {
         // initialize the grid and the particle_handler
         initialize();
@@ -328,16 +323,14 @@ namespace PICsimulator::TestSimulators
     
     }
 
-    template <int dim, StreamingAlgorithm SA>
-    inline void TestSimulators::TestStreaming<dim, SA>::initialize()
+    template <int dim>
+    inline void TestSimulators::TestStreaming<dim>::initialize()
     {
         // initialize particle handler
         location_type initial_location = motion->get_loc(0.);
         velocity_type initial_velocity;
-        if constexpr(SA == StreamingAlgorithm::VERLET)
-            initial_velocity = (motion->get_vel(0.));
-        else
-            initial_velocity = (motion->get_vel(-dt/2));
+
+        initial_velocity = (motion->get_vel(0.));
 
         std::cout << "\ninitial location: " << initial_location;
         std::cout << "\ninitial velocity: " << initial_velocity;
@@ -353,8 +346,8 @@ namespace PICsimulator::TestSimulators
         
     }
 
-    template <int dim, StreamingAlgorithm SA>
-    inline void TestStreaming<dim, SA>::compute_errors(
+    template <int dim>
+    inline void TestStreaming<dim>::compute_errors(
         typename Particles::ParticleIterator<dim> &particle)
     {
         // get location and velocity of the particle
@@ -364,10 +357,8 @@ namespace PICsimulator::TestSimulators
         // get the true location and velocity
         location_type true_location(motion->get_loc(current_time));
         velocity_type true_velocity;
-        if constexpr(SA == StreamingAlgorithm::LEAPFROG)
-            true_velocity = motion->get_vel(current_time-dt/2);
-        else
-            true_velocity = motion->get_vel(current_time);
+
+        true_velocity = motion->get_vel(current_time);
 
         // compute the errors
         location_error += norm(location - true_location) * dt;
@@ -383,19 +374,16 @@ namespace PICsimulator::TestSimulators
         // std::cout << "ref velocity: " << true_velocity << std::endl;
     }
 
-    template <int dim, StreamingAlgorithm SA>
-    inline Point<dim> TestSimulators::TestStreaming<dim, SA>::get_acceleration()
+    template <int dim>
+    inline Point<dim> TestSimulators::TestStreaming<dim>::get_acceleration()
     {
-        if constexpr(SA == StreamingAlgorithm::VERLET)
-        {
-            double time = current_time;
-            if(count%2!=0){
-                time += this->dt;
-            }
-            ++count;
-            return motion->get_acc(time);
-        } else
-            return motion->get_acc(current_time);
+        double time = current_time;
+        if(count%2!=0){
+            time += this->dt;
+        }
+        ++count;
+        return motion->get_acc(time);
+        
     }
 
 } // namespace TestSimulators
