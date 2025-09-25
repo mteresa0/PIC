@@ -26,33 +26,7 @@ static const double TEMPERATURE = 100;         // K
 /// Electron mass in kg
 static const double ELECTR_MASS = 1.9093837e-31; // kg
 
-/*static const double DEV_VELOCITY = std::sqrt(
-    BOLTZMANN_K * TEMPERATURE / ELECTR_MASS); // m/s
-
-static const double MEAN_VELOCITY = 2*DEV_VELOCITY / std::sqrt(2.0/M_PI); // m/s
-*/
 namespace Timers {
-
-    // static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME;
-    // static std::chrono::time_point<std::chrono::high_resolution_clock> STARTING_TIME_CUMULATIVE_CHRONO;
-    // static double DT, DT_CUMULATIVE_CHRONO;
-
-    /*
-    // #define TIC() STARTING_TIME = std::chrono::high_resolution_clock::now();
-    // #define TOC(){                                                                  \
-    //     auto now = std::chrono::high_resolution_clock::now();                       \
-    //     std::chrono::duration<double> diff = now - STARTING_TIME;                   \
-    //     DT = diff.count();                                                          \
-    // }
-
-    // #define START_CUMULATIVE_CHRONO() {STARTING_TIME_CUMULATIVE_CHRONO = std::chrono::high_resolution_clock::now();}
-    // #define REINIT_CUMULATIVE_CHRONO() {DT_CUMULATIVE_CHRONO = 0;}
-    // #define ADD_TIME_CUMULATIVE_CHRONO() {                                          \
-    //     auto now = std::chrono::high_resolution_clock::now();                       \
-    //     std::chrono::duration<double> diff = now - STARTING_TIME_CUMULATIVE_CHRONO; \
-    //     DT_CUMULATIVE_CHRONO += diff.count();                                       \
-    // }
-    */
 
     /// @brief Classic Timer class.
     /// There are implemented the classic tic toc functions
@@ -68,7 +42,6 @@ namespace Timers {
             is_started = true;
             start = std::chrono::high_resolution_clock::now();
         }
-
 
         /// @brief returns the time difference from the last tic in seconds.
         /// @details place this function after the code snippet you want to time.
@@ -221,16 +194,16 @@ namespace PICsimulator {
                 return diameter;
             }
 
-            /// @brief get std velocity according to (?) #todo
+            /// @brief get std velocity according to (?) TODO
             double get_std_velocity() const {
                 return BOLTZMANN_K * temperature / real_mass;
             }
 
-            /// @brief get mean velocity according to (?) #todo
+            /// @brief get mean velocity according to (?) \todo get reference
             double get_mean_velocity() const {
                 return 2 * get_std_velocity() / std::sqrt(2.0 / M_PI);
             }
-
+            
             /// @brief get free path length
             double get_free_path() const {
                 return (BOLTZMANN_K * temperature) / (std::sqrt(2) * M_PI * diameter * diameter * pressure);
@@ -264,16 +237,6 @@ namespace PICsimulator {
             N2 & operator=(const N2 &) = delete;
             N2 & operator=(N2 &&) = delete;
 
-        /*
-        private:
-            const double real_mass = 4.65e-26; // kg
-            const double charge = 0.0; // C
-            const double diameter = 3.0e-10; // m
-            const double temperature = 300; // K
-            const double pressure = 1e5; // Pa
-            const unsigned int weight = 30;
-            const double computed_mass = real_mass*weight; // kg
-        */
         };
     }
 
