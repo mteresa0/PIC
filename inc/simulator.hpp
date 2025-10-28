@@ -227,17 +227,6 @@ namespace PICsimulator{
         /// maxwell-boltzmann distribution
         void set_initial_velocity();
 
-        // random generators for maxwell distribution of velocity
-        /// \todo move this into utilities.hpp
-        /// @brief random device
-        std::random_device rd;
-
-        /// @brief random number generator
-        std::mt19937 gen; 
-
-        /// @brief normal distribution for velocity
-        std::normal_distribution<double> normal_distr;
-
     };
 
 };

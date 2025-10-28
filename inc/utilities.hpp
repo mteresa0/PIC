@@ -175,8 +175,7 @@ namespace PICsimulator {
                     computed_mass(c_weight*c_real_mass) {};
 
         public:
-            /// @brief ChemicalSpecies destructor virtual
-            // virtual ~ChemicalSpecies() = 0;0
+            /// @brief ChemicalSpecies destructor 
             ~ChemicalSpecies() = default;
 
             /// @brief get computed mass
@@ -218,8 +217,6 @@ namespace PICsimulator {
             const unsigned int weight;
             const double computed_mass; // kg
         };
-
-        // ChemicalSpecies::~ChemicalSpecies() {};
 
         class N2 : public ChemicalSpecies {
         public:
@@ -291,14 +288,45 @@ namespace PICsimulator {
 
         /// @brief random device
         std::random_device rd;
+
         /// @brief random number generator
         std::mt19937 gen(rd());
+
         /// @brief uniform distribution: [0, 1)
         std::uniform_real_distribution<double> uniform_distribution{0., 1.};
 
-        double RND(){
+        /// @brief uniform distribution: [0, 1)
+        std::uniform_real_distribution<double> normal_distribution{0., 1.};
+
+        /// @brief returns a random double drawn for a uniform distribution 
+        /// from 0 to 1.
+        double rnd_uniform(){
             return uniform_distribution(gen);
         };
+
+        /// @brief returns a random double drawn for a uniform distribution 
+        /// from a to b
+        /// @param a left extreme
+        /// @param b right extreme
+        double rnd_uniform(const double& a, const double& b) {
+            return rnd_uniform()*(b-a) + a;
+        }
+
+        /// @brief returns a random double drawn from a normal distibution 
+        /// with 0 mean and std of 1.
+        double rnd_gaussian(){
+            return normal_distribution(gen);
+        }
+
+        /// @brief returns a random double drawn from a normal distibution 
+        /// with mu mean and std of sigma.
+        /// @param mu mean
+        /// @param sigma standard deviation
+        double rnd_gaussian(const double & mu, const double & sigma){
+            return rnd_gaussian()*sigma + mu;
+        }
+
+
     }
 
 } // namespace PICsimulator

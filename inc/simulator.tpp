@@ -24,9 +24,7 @@ dof_handler(triangulation),
 particle_handler(triangulation, mapping, dim), 
 domain_data(domain_data_),
 streaming_algorithm(this),
-collision_handler(this),
-gen(rd()),
-normal_distr(0., species.get_std_velocity())
+collision_handler(this)
 {
     particle_handler.signals.particle_lost.connect(
     [this]( const typename Particles::ParticleIterator<dim>         &particle,
@@ -120,7 +118,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
         domain_data.get_lower_vertex(), 
         domain_data.get_upper_vertex());
 
-    triangulation.refine_global(2);
+    triangulation.refine_global(4);
 
     std::cout << " * Grid created * " << std::endl;
     domain_data.print_data_domain();
@@ -142,8 +140,7 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     std::vector<Point<dim>> positions(n_particles);    
     for(auto & position : positions){
         for(int n = 0; n<dim; ++n){
-            position[n] = lower_vertex[n] + 
-                (upper_vertex[n] - lower_vertex[n]) * Random::RND();
+            position[n] = Random::rnd_uniform(lower_vertex[n], upper_vertex[n]);
         }
     }
 
@@ -154,7 +151,8 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     set_initial_velocity();
 
     // printing message
-    std::cout << "Inserted " << particle_handler.n_global_particles() << " particles \n";
+    std::cout << "Inserted " << particle_handler.n_global_particles() << 
+        " particles \n";
 };
 
 template<int dim>
@@ -166,7 +164,8 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
     // for each particle draw all the velocity components and set the velocity of the particle
     for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
         for(int d = 0; d<dim; ++d){
-            initial_velocity[d] = normal_distr(gen);
+            initial_velocity[d] = 
+                Random::rnd_gaussian(0., species.get_std_velocity());
         }
         set_velocity(it, initial_velocity);
     }

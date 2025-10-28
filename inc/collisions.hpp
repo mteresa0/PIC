@@ -61,13 +61,13 @@ namespace PICsimulator {
         /// @brief Compute deflection angle chi.
         /// @details the cosine is randomly picked for a uniform distribution from -1 to 1 and then the angle is computed through the acos operator.
         double get_chi(/*const Point<dim> & relative velocity*/) const override{
-            return std::acos(Random::RND()*2.0 - 1.0);
+            return std::acos(Random::rnd_uniform(-1., 1));
         }
 
         /// @brief Compute the deflection angle epsilon
         /// @details The angle is randomly pick for an uniform distribution between -PI and PI.
         double get_epsilon() const override{
-            return (Random::RND()*2.0-1.0)*M_PI;
+            return (Random::rnd_uniform(-M_PI, M_PI));
         }
 
     private:
@@ -202,10 +202,10 @@ namespace PICsimulator {
             for (unsigned int k = 0; k<N_pair_tested; )
             {
                 // select two particles
-                unsigned int i = static_cast<unsigned int>(std::floor(Random::RND() * N));
-                unsigned int j = static_cast<unsigned int>(std::floor(Random::RND() * N));
+                unsigned int i = static_cast<unsigned int>(std::floor(Random::rnd_uniform() * N));
+                unsigned int j = static_cast<unsigned int>(std::floor(Random::rnd_uniform() * N));
                 while (i==j) {
-                    j = static_cast<unsigned int>(std::floor(Random::RND() * N));
+                    j = static_cast<unsigned int>(std::floor(Random::rnd_uniform() * N));
                 }
 
                 // get the two particles
@@ -230,7 +230,7 @@ namespace PICsimulator {
                 double P_coll = (F_correction * sigma * cr_norm )/ sigma_cr_max;
 
                 // pick random double [0, 1)
-                double U = Random::RND();
+                double U = Random::rnd_uniform();
 
                 // if(P_coll>1.0){
                 //     std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
