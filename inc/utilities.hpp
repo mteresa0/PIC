@@ -159,7 +159,8 @@ namespace PICsimulator {
             /// @param 'c_diameter' in (m)
             /// @param 'c_temperature' in (K)
             /// @param 'c_pressure' in (Pa)
-            /// @param 'c_weight' [unsigned int] computatational weight (how many real particles are represented by one computational particle)
+            /// @param 'c_weight' [unsigned int] computatational weight 
+            /// (how many real particles are represented by one comp particle)
             ChemicalSpecies(const double & c_real_mass,
                       const double & c_charge,
                       const double & c_diameter,
@@ -198,7 +199,8 @@ namespace PICsimulator {
                 return BOLTZMANN_K * temperature / real_mass;
             }
 
-            /// @brief get mean velocity according to (?) \todo get reference
+            /// @brief get mean velocity according to (?) 
+            // TODO: get reference
             double get_mean_velocity() const {
                 return 2 * get_std_velocity() / std::sqrt(2.0 / M_PI);
             }

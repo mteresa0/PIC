@@ -165,7 +165,9 @@ namespace PICsimulator::TestSimulators
         double get_vel_error() const { return velocity_error; }
 
     private:
-        const double dt; /// time step \todo move this outside so you dont have to create multiple istances of TestStreaming when running `test_convergence`
+        // TODO: move this outside so you dont have to create multiple istances 
+        // of TestStreaming when running `test_convergence`
+        const double dt; /// time step 
         const double T; /// total simulation time
 
         double location_error = 0; /// location error

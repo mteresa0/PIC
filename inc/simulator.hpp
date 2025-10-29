@@ -187,7 +187,7 @@ namespace PICsimulator{
         //// SIMULATION FUNCTIONS
 
         /// @brief evaluate acceleration 
-        /// \todo implement this function
+        // TODO: implement this function
         location_type evaluate_acceleration(){return location_type();};
 
         //// PRINTING FUNCTIONS

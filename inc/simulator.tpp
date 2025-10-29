@@ -49,7 +49,7 @@ void PICsimulator::Simulator<dim>::run() {
     std::vector<double> total_kinetic_energy(NT, 0);
     std::vector<double> sum_particles_kinetic_energy(NT, 0);
 
-    /// \todo add option to not run timers
+    // TODO: add option to not run timers
     Timers::Timer timer;
     Timers::Cumulative_Timer sorting_timer;
     Timers::Cumulative_Timer collision_timer;
@@ -63,11 +63,12 @@ void PICsimulator::Simulator<dim>::run() {
         streaming_algorithm.advance(particle_handler);
 
         std::cout << "\ntime step: " << i << std::endl;
-        // std::cout << "# number of particles: " 
-        //     << particle_handler.n_global_particles() << std::endl;
+
         collision_timer.tic();
         collision_handler.apply_collisions();
         collision_timer.toc();
+
+        // to check the kinetic enegies
         {
             for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
             {
@@ -80,9 +81,8 @@ void PICsimulator::Simulator<dim>::run() {
                 sum_vels += velocity;
 
             }
+            total_kinetic_energy[i] = particle_handler.n_global_particles() * species.get_mass() * sum_vels.norm();
         }
-
-        total_kinetic_energy[i] = particle_handler.n_global_particles() * species.get_mass() * sum_vels.norm();
 
         // sort particles into cells
         sorting_timer.tic();
