@@ -70,11 +70,13 @@ namespace PICsimulator{
         /// @param dt_ time step
         /// @param T_ total simulation time
         /// @param n_particles_ number of particles
+        /// @param species_ species
         /// @param domain_data_ domain data object
         Simulator(
             const double &dt_ = 1e-8,
             const double &T_ = 1e-5,
             const unsigned int &n_particles_ = 100,
+            const Species::ChemicalSpecies & species_ = Species::N2(),
             const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>());
         
         /// @brief run the simulation
@@ -140,7 +142,7 @@ namespace PICsimulator{
     private:
         /// species
         /// \todo pass this by constructor and change it to the base class
-        Species::N2 species;
+        Species::ChemicalSpecies species;
        
         /// @brief It handles lost particles and reinsert them in the domain.
         /// This function is called when a particle leaves the domain and it 

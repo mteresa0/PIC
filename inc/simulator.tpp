@@ -15,7 +15,9 @@ PICsimulator::Simulator<dim>::Simulator(
     const double &dt_,
     const double &T_,
     const unsigned int &n_particles_,
+    const Species::ChemicalSpecies &species_,
     const Domain::DomainData<dim> &domain_data_):
+species(species_),
 n_particles(n_particles_),
 dt(dt_),
 T(T_),
