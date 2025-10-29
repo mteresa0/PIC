@@ -235,6 +235,23 @@ namespace PICsimulator {
             N2 & operator=(N2 &&) = delete;
 
         };
+
+        class O2 : public ChemicalSpecies {
+        public:
+            O2() : ChemicalSpecies(
+                /*real mass*/ 5.31339290530668e-26, /*kg*/
+                /*charge*/ 0.0, /*C*/
+                /*diameter*/ 3.0e-10, /*m*/
+                /*temperature*/ 300.0, /*K*/
+                /*pressure*/ 1.0e5, /*Pa*/
+                /*weight*/ 30) {};
+            
+            ~O2() = default;
+            O2(const O2 &) = default;
+            O2(O2 &&) = delete;
+            O2 & operator=(const O2 &) = delete;
+            O2 & operator=(O2 &&) = delete;
+        };
     }
 
     
