@@ -52,6 +52,7 @@ void PICsimulator::Simulator<dim>::run() {
     // TODO: add option to not run timers
     Timers::Timer timer;
     Timers::Cumulative_Timer sorting_timer;
+    Timers::Cumulative_Timer streaming_timer;
     Timers::Cumulative_Timer collision_timer;
      
     std::cout << "---------- starting simulation ----------" << std::endl;
@@ -60,7 +61,9 @@ void PICsimulator::Simulator<dim>::run() {
     for(unsigned int i = 0; i<NT; ++i){
         velocity_type sum_vels;
 
+        streaming_timer.tic();
         streaming_algorithm.advance(particle_handler);
+        streaming_timer.toc();
 
         std::cout << "\ntime step: " << i << std::endl;
 
@@ -98,6 +101,8 @@ void PICsimulator::Simulator<dim>::run() {
     double sim_time = timer.toc();
 
     std::cout << "Simulation completed in    " << sim_time    << " seconds" << std::endl; 
+    std::cout << "streaming particles time:  ";
+    streaming_timer.print(sim_time);
     std::cout << "sorting particles time:    ";
     sorting_timer.print(sim_time);
     std::cout << "collisions time:           ";
