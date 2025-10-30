@@ -15,6 +15,7 @@
 #include "simulator.hpp"
 #include "utilities.hpp"
 #include "deal.II/particles/particle_handler.h"
+#include "species.hpp"
 
 namespace PICsimulator {
 

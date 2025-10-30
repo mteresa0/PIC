@@ -30,6 +30,7 @@
 #include "domain.hpp"
 #include "streaming.hpp"
 #include "collisions.hpp"
+#include "species.hpp"
 
 namespace PICsimulator{
 
