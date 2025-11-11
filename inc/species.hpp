@@ -117,6 +117,39 @@ namespace PICsimulator::Species {
         O2 & operator=(const O2 &) = delete;
         O2 & operator=(O2 &&) = delete;
     };
+
+
+    class MultiSpecie {
+    public:
+        MultiSpecie(
+            const std::vector<ChemicalSpecies> & sp_vec_,
+            const std::vector<unsigned int> n_particles_
+        ):  species_vec(sp_vec_),
+            n_particles(n_particles_),
+            n_species(species_vec.size())
+        {
+            std::cout << n_species << "   " << n_particles.size() << std::endl;
+            if (n_species!=n_particles.size()){
+                std::string error_msg = 
+                    "Invalid argument: The 'species' vector size (" +
+                    std::to_string(n_species) + 
+                    ") must match the 'n_particle' vector size (" + 
+                    std::to_string(n_particles.size()) + ").";
+                                            
+                    throw std::invalid_argument(error_msg);
+            }
+
+        };
+
+
+    private:
+        const std::vector<ChemicalSpecies> species_vec;
+        const std::vector<unsigned int> n_particles;
+
+        const unsigned int n_species;
+
+    };
 }
+
 
 #endif // SPECIES_PIC_HPP
