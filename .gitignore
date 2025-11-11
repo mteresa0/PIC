@@ -10,3 +10,4 @@ main
 outputs/*
 docs/html/*
 docs/latex/*
+docs/report/*
