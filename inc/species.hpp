@@ -165,10 +165,22 @@ namespace PICsimulator::Species {
     /// @brief default constructor
     MultiSpecie() : 
         species_vec({N2 ()}), n_particles({100}), n_species(species_vec.size()) {};
+
+    /// @brief provides read-only array-like access to a specie
+    /// @param i specie index
+    const ChemicalSpecies& operator[](const unsigned int i) const {
+        if (i >= species_vec.size()) { 
+            throw std::out_of_range("Index out of bounds for species_vec");
+        }
+        return species_vec[i];
+    }
     
     /// @brief get the number of particles of the i-specie
     /// @param i 
-    unsigned int get_n_particles(const unsigned int i ) const {
+    unsigned int get_n_particles(const unsigned int i ) const {    
+        if (i >= n_particles.size()) { 
+            throw std::out_of_range("Index out of bounds for n_particles");
+        }
         return n_particles[i];
     };
 
@@ -179,6 +191,9 @@ namespace PICsimulator::Species {
     /// @brief get the i-specie
     /// @param i
     const ChemicalSpecies& get_specie(const unsigned int i ) const {
+        if (i >= species_vec.size()) { 
+            throw std::out_of_range("Index out of bounds for species_vec");
+        }
         return species_vec[i];
     }
 
@@ -197,6 +212,7 @@ namespace PICsimulator::Species {
         const unsigned int n_species;
 
     };
+    // TODO: add printing info method
 }
 
 
