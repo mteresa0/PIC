@@ -140,7 +140,20 @@ namespace PICsimulator::Species {
             }
 
         };
+    
+    unsigned int get_n_particles(const unsigned int i ) const {
+        return n_particles[i];
+    };
 
+    unsigned int get_n_species() const {return n_species;};
+
+    const ChemicalSpecies& get_specie(const unsigned int i ) const {
+        return species_vec[i];
+    }
+
+    const std::vector<ChemicalSpecies>& get_species_vector() const {
+        return species_vec;
+    };
 
     private:
         const std::vector<ChemicalSpecies> species_vec;
