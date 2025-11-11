@@ -1,3 +1,17 @@
+/**
+ * @file species.hpp
+ * @author Maria Teresa Cazzola 
+ * @brief Defines the **ChemicalSpecies** and **MultiSpecie** classes for 
+ * particle simulation. 
+ * @details This header contains definitions for:
+ * 1. The fundamental properties of a single particle type 
+ * (@ref ChemicalSpecies).
+ * 2. The container class for managing a complete mixture of species 
+ * (@ref MultiSpecie).
+ * 
+ * @date 2025-10-30
+ */
+
 #ifndef SPECIES_PIC_HPP
 #define SPECIES_PIC_HPP
 
@@ -5,16 +19,17 @@
 
 namespace PICsimulator::Species {
 
+    /// @brief base class to species
     class ChemicalSpecies {
     protected: 
         /// @brief ChemicalSpecies constructor
-        /// @param 'c_name' name specie
-        /// @param 'c_real_mass' mass in (kg) of one particle
-        /// @param 'c_charge' in (C)
-        /// @param 'c_diameter' in (m)
-        /// @param 'c_temperature' in (K)
-        /// @param 'c_pressure' in (Pa)
-        /// @param 'c_weight' [unsigned int] computatational weight 
+        /// @param `c_name` name specie
+        /// @param `c_real_mass` mass in (kg) of one particle
+        /// @param `c_charge` in (C)
+        /// @param `c_diameter` in (m)
+        /// @param `c_temperature` in (K)
+        /// @param `c_pressure` in (Pa)
+        /// @param `c_weight` [unsigned int] computatational weight 
         /// (how many real particles are represented by one comp particle)
         ChemicalSpecies(const std::string& c_name,
                     const double & c_real_mass,
@@ -81,6 +96,7 @@ namespace PICsimulator::Species {
         const double computed_mass; // kg
     };
 
+    // TODO: move this in a json file
     class N2 : public ChemicalSpecies {
     public:
         N2() : ChemicalSpecies(
@@ -118,9 +134,14 @@ namespace PICsimulator::Species {
         O2 & operator=(O2 &&) = delete;
     };
 
-
+    // TODO: add constructor from json file
+    /// @brief class containg all the info about the gas mixture. 
     class MultiSpecie {
     public:
+        /// @brief constructor
+        /// @param sp_vec_ vector of species
+        /// @param n_particles_ vector of particles number corresponding to each 
+        /// specie
         MultiSpecie(
             const std::vector<ChemicalSpecies> & sp_vec_,
             const std::vector<unsigned int> n_particles_
@@ -141,24 +162,34 @@ namespace PICsimulator::Species {
 
         };
     
+    /// @brief get the number of particles of the i-specie
+    /// @param i 
     unsigned int get_n_particles(const unsigned int i ) const {
         return n_particles[i];
     };
 
+    /// @brief get the number of species in this gas mixture
+    /// @return 
     unsigned int get_n_species() const {return n_species;};
 
+    /// @brief get the i-specie
+    /// @param i
     const ChemicalSpecies& get_specie(const unsigned int i ) const {
         return species_vec[i];
     }
 
+    /// @brief get the species vector
+    /// @return reference of the species vector
     const std::vector<ChemicalSpecies>& get_species_vector() const {
         return species_vec;
     };
 
     private:
+        /// @brief vector of species
         const std::vector<ChemicalSpecies> species_vec;
+        /// @brief vecotr of particles numbers (corresponding to each specie)
         const std::vector<unsigned int> n_particles;
-
+        /// @brief number of species
         const unsigned int n_species;
 
     };
