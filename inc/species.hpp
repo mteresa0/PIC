@@ -8,6 +8,7 @@ namespace PICsimulator::Species {
     class ChemicalSpecies {
     protected: 
         /// @brief ChemicalSpecies constructor
+        /// @param 'c_name' name specie
         /// @param 'c_real_mass' mass in (kg) of one particle
         /// @param 'c_charge' in (C)
         /// @param 'c_diameter' in (m)
@@ -15,12 +16,14 @@ namespace PICsimulator::Species {
         /// @param 'c_pressure' in (Pa)
         /// @param 'c_weight' [unsigned int] computatational weight 
         /// (how many real particles are represented by one comp particle)
-        ChemicalSpecies(const double & c_real_mass,
+        ChemicalSpecies(const std::string& c_name,
+                    const double & c_real_mass,
                     const double & c_charge,
                     const double & c_diameter,
                     const double & c_temperature,
                     const double & c_pressure,
                     const unsigned int & c_weight):
+                name(c_name),
                 real_mass(c_real_mass), 
                 charge(c_charge),
                 diameter(c_diameter),
@@ -64,7 +67,11 @@ namespace PICsimulator::Species {
             return (BOLTZMANN_K * temperature) / (std::sqrt(2) * M_PI * diameter * diameter * pressure);
         }
 
+        /// @brief get specie name
+        const std::string get_name() const {return name;}
+
     private:
+        const std::string name;
         const double real_mass; // kg
         const double charge; // C
         const double diameter; // m
@@ -77,6 +84,7 @@ namespace PICsimulator::Species {
     class N2 : public ChemicalSpecies {
     public:
         N2() : ChemicalSpecies(
+            /*name*/ "N2",
             /*real mass*/ 4.26e-26, /*kg*/
             /*charge*/ 0.0,
             /*diameter*/ 3.0e-10,
@@ -95,6 +103,7 @@ namespace PICsimulator::Species {
     class O2 : public ChemicalSpecies {
     public:
         O2() : ChemicalSpecies(
+            /*name*/ "O2",
             /*real mass*/ 5.31339290530668e-26, /*kg*/
             /*charge*/ 0.0, /*C*/
             /*diameter*/ 3.0e-10, /*m*/
