@@ -161,6 +161,10 @@ namespace PICsimulator::Species {
             }
 
         };
+
+    /// @brief default constructor
+    MultiSpecie() : 
+        species_vec({N2 ()}), n_particles({100}), n_species(species_vec.size()) {};
     
     /// @brief get the number of particles of the i-specie
     /// @param i 
