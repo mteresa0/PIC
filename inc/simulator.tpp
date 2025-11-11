@@ -23,18 +23,10 @@ dt(dt_),
 T(T_),
 mapping(1), 
 dof_handler(triangulation),
-particle_handler(triangulation, mapping, dim), 
 domain_data(domain_data_),
 streaming_algorithm(this),
 collision_handler(this)
-{
-    particle_handler.signals.particle_lost.connect(
-    [this]( const typename Particles::ParticleIterator<dim>         &particle,
-            const typename Triangulation<dim>::active_cell_iterator &cell) {
-        this->boundary_wall(particle, cell);
-        }
-    );
-};
+{};
 
 template<int dim>
 void PICsimulator::Simulator<dim>::run() {
@@ -220,6 +212,15 @@ void PICsimulator::Simulator<dim>::initialize()
         std::cout << "!!! YOU ARE PROBABLY RUNNING AGAIN THE SIMULATION !!!" << std::endl;
         return;
     }
+
+    // initialize particles handlers
+    particle_handler.initialize(triangulation, mapping, dim);
+    particle_handler.signals.particle_lost.connect(
+    [this]( const typename Particles::ParticleIterator<dim>         &particle,
+            const typename Triangulation<dim>::active_cell_iterator &cell) {
+        this->boundary_wall(particle, cell);
+        }
+    );
 
     // initialize grid and particles
     make_grid();
