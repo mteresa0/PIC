@@ -160,11 +160,11 @@ namespace PICsimulator {
     inline void Collisions<dim, T>::apply_collisions()
     {
         // get the particle handler and dof handler
-        Particles::ParticleHandler<dim>& ph = sim->get_particle_handler();
-        const DoFHandler<dim>& dof_handler = sim->get_dof_handler();
+        Particles::ParticleHandler<dim>& ph(sim->particle_handler);
+        const DoFHandler<dim>& dof_handler(sim->dof_handler);
 
-        const double number_density = sim->get_number_density();
-        const double dt = sim->get_time_step();
+        const double number_density = sim->number_density;
+        const double dt = sim->dt;
 
         const double weight = data_species.get_weight();
 

@@ -37,6 +37,7 @@ namespace PICsimulator{
     // using namespace Timers;    
     using namespace dealii;
 
+    // TODO: move it in domain class
     /// @brief default domain for the simulation. Lower and upper vertices are
     /// of the unit square (2D) or unit cube (3D).
     /// @tparam dim spatial dimension
@@ -96,44 +97,8 @@ namespace PICsimulator{
         /// no move assignment
         Simulator & operator=(Simulator &&) = delete;
 
-        // /// @brief get the particle handler pointer
-        // /// @return particle handler pointer
-        // typename Particles::ParticleHandler<dim> & get_particle_handler() {
-        //     return particle_handler;
-        // };
-
-        /// @brief get dof handler pointer
-        /// @return dof handler pointer
-        const DoFHandler<dim> & get_dof_handler() const {
-            return dof_handler;
-        };
-
         friend class Streaming<dim>;
-
-        /// @brief get the volume of the cell.
-        /// In 2D it will return the surface of the cell.
-        /// For now, all the cell are of the same size.
-        double get_cell_volume() const {
-            return cell_volume;
-        };
-
-        // /// @brief get the number density
-        // /// @return (# particle in the simulation) / (volume of the domain)
-        // double get_number_density() const {
-        //     return number_density;
-        // };
-
-        /// @brief get the simulation timestep
-        double get_time_step() const {
-            return dt;
-        };
-
-        /// @brief get the diameter of a cell
-        /// For now, by construction all the cell have the same diameter
-        double get_cell_diameter() const {
-            double d_cell = dof_handler.begin()->diameter();
-            return d_cell;
-        };
+        friend class Collisions<dim, HardSphere<dim>>;
 
         /// @brief get the simulated spicies 
         const species_type & get_species() const {
