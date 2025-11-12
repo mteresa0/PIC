@@ -66,18 +66,18 @@ namespace PICsimulator{
     public:
         using velocity_type = Tensor<1, dim>;
         using location_type = Point<dim>;
+        using species_type = Species::MultiSpecie;
+        using ph_type = dealii::Particles::ParticleHandler<dim>;
 
         /// @brief Constructor of the Simulator class
         /// @param dt_ time step
         /// @param T_ total simulation time
-        /// @param n_particles_ number of particles
         /// @param species_ species
         /// @param domain_data_ domain data object
         Simulator(
             const double &dt_ = 1e-8,
             const double &T_ = 1e-5,
-            const unsigned int &n_particles_ = 100,
-            const Species::ChemicalSpecies & species_ = Species::N2(),
+            const species_type & species_ = species_type (),
             const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>());
         
         /// @brief run the simulation
@@ -96,11 +96,11 @@ namespace PICsimulator{
         /// no move assignment
         Simulator & operator=(Simulator &&) = delete;
 
-        /// @brief get the particle handler pointer
-        /// @return particle handler pointer
-        typename Particles::ParticleHandler<dim> & get_particle_handler() {
-            return particle_handler;
-        };
+        // /// @brief get the particle handler pointer
+        // /// @return particle handler pointer
+        // typename Particles::ParticleHandler<dim> & get_particle_handler() {
+        //     return particle_handler;
+        // };
 
         /// @brief get dof handler pointer
         /// @return dof handler pointer
@@ -117,11 +117,11 @@ namespace PICsimulator{
             return cell_volume;
         };
 
-        /// @brief get the number density
-        /// @return (# particle in the simulation) / (volume of the domain)
-        double get_number_density() const {
-            return number_density;
-        };
+        // /// @brief get the number density
+        // /// @return (# particle in the simulation) / (volume of the domain)
+        // double get_number_density() const {
+        //     return number_density;
+        // };
 
         /// @brief get the simulation timestep
         double get_time_step() const {
@@ -136,14 +136,13 @@ namespace PICsimulator{
         };
 
         /// @brief get the simulated spicies 
-        const Species::ChemicalSpecies & get_species() const {
+        const species_type & get_species() const {
             return species;
         };
 
     private:
         /// species
-        /// \todo pass this by constructor and change it to the base class
-        Species::ChemicalSpecies species;
+        species_type species;
        
         /// @brief It handles lost particles and reinsert them in the domain.
         /// This function is called when a particle leaves the domain and it 
@@ -153,7 +152,8 @@ namespace PICsimulator{
         /// @param cell cell iterator object.
         void boundary_wall(
             const typename Particles::ParticleIterator<dim>         &particle,
-            const typename Triangulation<dim>::active_cell_iterator &cell);
+            const typename Triangulation<dim>::active_cell_iterator &cell,
+            const unsigned int & index_species);
 
         //// INITIALIZATION PARAMETERS
 
@@ -162,8 +162,10 @@ namespace PICsimulator{
 
         // simulation parameters
 
-        /// @brief number of particles in the simulation
-        const unsigned int n_particles;
+        // /// @brief number of particles in the simulation
+        // const unsigned int n_particles;
+
+        const unsigned int n_species;
 
         /// @brief time step
         const double dt;
@@ -174,8 +176,8 @@ namespace PICsimulator{
         /// @brief cell volume
         double cell_volume;
 
-        /// @brief number density (# particles / tot. volume)
-        double number_density;
+        // /// @brief number density (# particles / tot. volume)
+        // double number_density;
 
         //// INIZIALIZATION FUNCTIONS
 
@@ -210,7 +212,7 @@ namespace PICsimulator{
         DoFHandler<dim>                         dof_handler;
 
         /// @brief particle handler object. It handles the particles and their properties.
-        dealii::Particles::ParticleHandler<dim> particle_handler;
+        std::vector<ph_type> particle_handlers;
         
         /// @brief domain data object. It stores the domain information and 
         /// how the particles behave when they leave the domain.
@@ -221,7 +223,8 @@ namespace PICsimulator{
         Streaming<dim> streaming_algorithm;
 
         /// @brief collision object. It handles the collisions of the particles.
-        Collisions<dim, HardSphere<dim>> collision_handler;
+        // Collisions<dim, HardSphere<dim>> collision_handler;
+        // TODO: generalize for different kernels
 
         /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();

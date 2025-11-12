@@ -14,18 +14,18 @@ template<int dim>
 PICsimulator::Simulator<dim>::Simulator(
     const double &dt_,
     const double &T_,
-    const unsigned int &n_particles_,
-    const Species::ChemicalSpecies &species_,
+    const species_type &species_,
     const Domain::DomainData<dim> &domain_data_):
-species(species_),
-n_particles(n_particles_),
 dt(dt_),
 T(T_),
+species(species_),
+n_species(species.get_n_species()),
 mapping(1), 
 dof_handler(triangulation),
+particle_handlers(n_species),
 domain_data(domain_data_),
-streaming_algorithm(this),
-collision_handler(this)
+streaming_algorithm(this)
+// collision_handler(this)
 {};
 
 template<int dim>
@@ -54,34 +54,43 @@ void PICsimulator::Simulator<dim>::run() {
         velocity_type sum_vels;
 
         streaming_timer.tic();
-        streaming_algorithm.advance(particle_handler);
+        for (auto & ph : particle_handlers){
+            streaming_algorithm.advance(ph);
+        }
         streaming_timer.toc();
 
-        std::cout << "\ntime step: " << i << std::endl;
+        std::cout << "time step: " << i << std::endl;
 
-        collision_timer.tic();
-        collision_handler.apply_collisions();
-        collision_timer.toc();
+        // collision_timer.tic();
+        // collision_handler.apply_collisions();
+        // collision_timer.toc();
 
         // to check the kinetic enegies
         {
-            for (auto it = particle_handler.begin(); it!=particle_handler.end(); ++it)
-            {
-                // Point<dim> position(it->get_location());
-                Tensor<1, dim> velocity(get_velocity_from_properties(it));
-                
-                // save kinetic energy per particle
-                double ke = species.get_mass() * velocity.norm();
-                sum_particles_kinetic_energy[i] += ke;
-                sum_vels += velocity;
+            unsigned int it_ph = 0;
+            for (auto & ph : particle_handlers) {
+                for (auto it = ph.begin(); it!=ph.end(); ++it)
+                {
+                    // Point<dim> position(it->get_location());
+                    Tensor<1, dim> velocity(get_velocity_from_properties(it));
+                    
+                    // save kinetic energy per particle
+                    double ke = species[it_ph].get_mass() * velocity.norm();
+                    sum_particles_kinetic_energy[i] += ke;
+                    sum_vels += velocity;
 
+                }
+                total_kinetic_energy[i] = ph.n_global_particles() * 
+                    species[it_ph].get_mass() * sum_vels.norm();
+                ++it_ph;
             }
-            total_kinetic_energy[i] = particle_handler.n_global_particles() * species.get_mass() * sum_vels.norm();
         }
 
         // sort particles into cells
         sorting_timer.tic();
-        particle_handler.sort_particles_into_subdomains_and_cells();
+        for(auto & ph: particle_handlers){
+            ph.sort_particles_into_subdomains_and_cells();
+        }
         sorting_timer.toc();
 
         // print data to files
@@ -135,23 +144,24 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     auto upper_vertex = domain_data.get_upper_vertex();
     auto lower_vertex = domain_data.get_lower_vertex();
 
-   // generate random position for each particle. store positions in a vector
-    std::vector<Point<dim>> positions(n_particles);    
-    for(auto & position : positions){
-        for(int n = 0; n<dim; ++n){
-            position[n] = Random::rnd_uniform(lower_vertex[n], upper_vertex[n]);
+    for (unsigned int i = 0; i<n_species; ++i) {
+        // generate random position for each particle. store positions in a vector
+        std::vector<Point<dim>> positions(species.get_n_particles(i));    
+        for(auto & position : positions){
+            for(int n = 0; n<dim; ++n){
+                position[n] = Random::rnd_uniform(lower_vertex[n], upper_vertex[n]);
+            }
         }
-    }
 
-    // insert particles by location
-    particle_handler.insert_particles(positions);
+        // insert particles by location
+        particle_handlers[i].insert_particles(positions);
+    }
 
     // set velocities
     set_initial_velocity();
 
     // printing message
-    std::cout << "Inserted " << particle_handler.n_global_particles() << 
-        " particles \n";
+    std::cout << "Inserted particles\n";
 };
 
 template<int dim>
@@ -160,13 +170,15 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
     // initialize velocity 
     Tensor<1, dim> initial_velocity;
 
-    // for each particle draw all the velocity components and set the velocity of the particle
-    for(auto it = particle_handler.begin(); it!=particle_handler.end(); ++it){
-        for(int d = 0; d<dim; ++d){
-            initial_velocity[d] = 
-                Random::rnd_gaussian(0., species.get_std_velocity());
+    for(unsigned int i = 0; i<n_species; ++i) {
+        // for each particle draw all the velocity components and set the velocity of the particle
+        for(auto it = particle_handlers[i].begin(); it!=particle_handlers[i].end(); ++it){
+            for(int d = 0; d<dim; ++d){
+                initial_velocity[d] = 
+                    Random::rnd_gaussian(0., species[i].get_std_velocity());
+            }
+            set_velocity(it, initial_velocity);
         }
-        set_velocity(it, initial_velocity);
     }
     return;
 };
@@ -174,7 +186,8 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
 template <int dim>
 void PICsimulator::Simulator<dim>::boundary_wall( 
     const typename Particles::ParticleIterator<dim>         &particle,
-    const typename Triangulation<dim>::active_cell_iterator &cell) 
+    const typename Triangulation<dim>::active_cell_iterator &cell,
+    const unsigned int & index_species) 
 {
     // get position and velocity of the particle. initialize new velocity variable
     Point<dim> location(particle->get_location());
@@ -191,7 +204,7 @@ void PICsimulator::Simulator<dim>::boundary_wall(
     }
 
     // insert the lost particle 
-    particle_handler.insert_particle(
+    particle_handlers[index_species].insert_particle(
         location,
         mapping.transform_real_to_unit_cell(cell, location),
         particle->get_id(),
@@ -205,7 +218,7 @@ void PICsimulator::Simulator<dim>::initialize()
     if (initialized)
     {
         std::cout << "Already initialized with:" << std::endl;
-        std::cout << "n# particles: " << particle_handler.n_global_particles() << std::endl;
+        // std::cout << "n# particles: " << particle_handler.n_global_particles() << std::endl;
         std::cout << "n# cells: "     << triangulation.n_active_cells() << std::endl;
 
         std::cout << " * Initialization skipped * " << std::endl;
@@ -214,14 +227,15 @@ void PICsimulator::Simulator<dim>::initialize()
     }
 
     // initialize particles handlers
-    particle_handler.initialize(triangulation, mapping, dim);
-    particle_handler.signals.particle_lost.connect(
-    [this]( const typename Particles::ParticleIterator<dim>         &particle,
-            const typename Triangulation<dim>::active_cell_iterator &cell) {
-        this->boundary_wall(particle, cell);
-        }
-    );
-
+    for (unsigned int i = 0; i<n_species; ++i){
+        particle_handlers[i].initialize(triangulation, mapping, dim);
+        particle_handlers[i].signals.particle_lost.connect(
+        [this, i]( const typename Particles::ParticleIterator<dim>         &particle,
+                const typename Triangulation<dim>::active_cell_iterator &cell) {
+            this->boundary_wall(particle, cell, i);
+            }
+        );
+    }
     // initialize grid and particles
     make_grid();
     insert_particles_dummy();
@@ -236,37 +250,37 @@ void PICsimulator::Simulator<dim>::initialize()
         volume_domain += cell_volume_;
         d_cell = cell->diameter();
     }
-    number_density = n_particles/volume_domain;
-    particles_per_cell = static_cast<double>(n_particles)/n_cells;
+    // number_density = n_particles/volume_domain;
+    // particles_per_cell = static_cast<double>(n_particles)/n_cells;
 
     cell_volume = volume_domain/n_cells;
 
     // printing data
     {
-    std::cout << "Number density: " << number_density << " #/m^dim"<< std::endl;
-    std::cout << "Number of particles: " << n_particles << std::endl;
-    std::cout << "Number of cells: " << n_cells << std::endl;
-    std::cout << "Number of particles per cell: " 
-        << particles_per_cell << std::endl;
-    std::cout << "Diameter of a cell: " << d_cell << std::endl;
-    std::cout << "Volume of a cell: " 
-        << cell_volume << std::endl;
-    std::cout << "Volume of the domain: " << volume_domain << std::endl;
+    // std::cout << "Number density: " << number_density << " #/m^dim"<< std::endl;
+    // std::cout << "Number of particles: " << n_particles << std::endl;
+    // std::cout << "Number of cells: " << n_cells << std::endl;
+    // std::cout << "Number of particles per cell: " 
+    //     << particles_per_cell << std::endl;
+    // std::cout << "Diameter of a cell: " << d_cell << std::endl;
+    // std::cout << "Volume of a cell: " 
+    //     << cell_volume << std::endl;
+    // std::cout << "Volume of the domain: " << volume_domain << std::endl;
 
-    std::cout << "--------- species data ---------" << std::endl;
-    std::cout << "mean velocity: " 
-        << species.get_mean_velocity() << std::endl;
-    std::cout << "mean free path : " 
-        << species.get_free_path() << std::endl;
+    // std::cout << "--------- species data ---------" << std::endl;
+    // std::cout << "mean velocity: " 
+    //     << species.get_mean_velocity() << std::endl;
+    // std::cout << "mean free path : " 
+    //     << species.get_free_path() << std::endl;
 
-    std::cout << "time to exit a cell: " 
-        << d_cell / species.get_mean_velocity() << std::endl;
-    std::cout << "time step: " 
-        << dt << std::endl;
+    // std::cout << "time to exit a cell: " 
+    //     << d_cell / species.get_mean_velocity() << std::endl;
+    // std::cout << "time step: " 
+    //     << dt << std::endl;
     }
 
     // initialize collisions
-    collision_handler.initialize();
+    // collision_handler.initialize();
 
     initialized = true;
     return;
@@ -277,24 +291,24 @@ void PICsimulator::Simulator<dim>::print_data_to_files(
     const int  & i)
 {
 
-    Particles::DataOut<dim> particle_out;
+    // Particles::DataOut<dim> particle_out;
     
-    particle_out.build_patches( 
-        particle_handler,
-        std::vector<std::string>(dim, "velocity"),
-        std::vector<DataComponentInterpretation::DataComponentInterpretation>(
-            dim, 
-            DataComponentInterpretation::component_is_part_of_vector));
+    // particle_out.build_patches( 
+    //     particle_handler,
+    //     std::vector<std::string>(dim, "velocity"),
+    //     std::vector<DataComponentInterpretation::DataComponentInterpretation>(
+    //         dim, 
+    //         DataComponentInterpretation::component_is_part_of_vector));
 
-    DataOutBase::VtkFlags output_flags;
-    output_flags.time                       = dt*i;
-    output_flags.cycle                      = i;
-    output_flags.physical_units["velocity"] = "m/s";
+    // DataOutBase::VtkFlags output_flags;
+    // output_flags.time                       = dt*i;
+    // output_flags.cycle                      = i;
+    // output_flags.physical_units["velocity"] = "m/s";
 
-    particle_out.set_flags(output_flags);
+    // particle_out.set_flags(output_flags);
 
-    std::ofstream output("outputs/particles-" +
-                        Utilities::int_to_string(i, 5) +
-                        ".vtu");
-    particle_out.write_vtu(output);
+    // std::ofstream output("outputs/particles-" +
+    //                     Utilities::int_to_string(i, 5) +
+    //                     ".vtu");
+    // particle_out.write_vtu(output);
 }
