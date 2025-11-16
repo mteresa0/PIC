@@ -66,6 +66,7 @@ namespace PICsimulator::Species {
             return diameter;
         }
 
+        // TODO: add method to get max velocity (magnitude)
         /// @brief get std velocity according to (?) TODO
         double get_std_velocity() const {
             return BOLTZMANN_K * temperature / real_mass;
@@ -147,7 +148,9 @@ namespace PICsimulator::Species {
             const std::vector<unsigned int> n_particles_
         ):  species_vec(sp_vec_),
             n_particles(n_particles_),
-            n_species(species_vec.size())
+            n_species(species_vec.size()),
+            n_combinations(1/2*n_species*(n_species-1)),
+            reduced_mass(n_combinations)
         {
             std::cout << n_species << "   " << n_particles.size() << std::endl;
             if (n_species!=n_particles.size()){
@@ -160,11 +163,20 @@ namespace PICsimulator::Species {
                     throw std::invalid_argument(error_msg);
             }
 
+            // initialize reduced_mass vector
+            unsigned int k = 0;
+            for (unsigned int i = 0; i<n_combinations; ++i) {
+                double m_i(species_vec[i].get_mass());
+                for (unsigned int j = 0; j<n_combinations; ++j){
+                    double m_j(species_vec[j].get_mass());
+                    reduced_mass[k] = m_i*m_j/(m_i+m_j);
+                    ++k;
+                }
+            }
         };
 
     /// @brief default constructor
-    MultiSpecie() : 
-        species_vec({N2 ()}), n_particles({100}), n_species(species_vec.size()) {};
+    MultiSpecie() : MultiSpecie({N2()}, {1000}) {};
 
     /// @brief provides read-only array-like access to a specie
     /// @param i specie index
@@ -203,6 +215,10 @@ namespace PICsimulator::Species {
         return species_vec;
     };
 
+    const double & get_reduced_mass(const unsigned int & i) const {
+        return reduced_mass[i];
+    };
+
     private:
         /// @brief vector of species
         const std::vector<ChemicalSpecies> species_vec;
@@ -210,6 +226,10 @@ namespace PICsimulator::Species {
         const std::vector<unsigned int> n_particles;
         /// @brief number of species
         const unsigned int n_species;
+
+        const unsigned int n_combinations;        
+
+        std::vector<double> reduced_mass;
 
     };
     // TODO: add printing info method

@@ -21,6 +21,8 @@ namespace PICsimulator {
 
     using namespace dealii;
 
+    using species_type = Species::MultiSpecie;
+
    /// base class for different collisions algorithms.
     template<int dim>
     class CollisionKernel {
@@ -45,19 +47,18 @@ namespace PICsimulator {
     class HardSphere: public CollisionKernel<dim> {
     public:
         /// HardSphere constructor
-        HardSphere(const double & d12_=1e-8):
-            d12(d12_) {};
+        HardSphere() = default;
         /// HardSphere destructor
         ~HardSphere() = default;
 
         /// @brief Compute the cross section
         /// @details Different implementation for 2d and 3d
-        double compute_cross_section(/*const Point<dim> & relative velocity*/) const override;
+        double compute_cross_section(const unsigned int &k
+                                    /*, const Point<dim> & relative_velocity*/
+                                    ) const override;
 
         /// @brief Setter for the diameter
-        void set_diameter(const double & d12_){
-            d12 = d12_;
-        }
+        void set_diameter(const species_type& ms);
 
         /// @brief Compute deflection angle chi.
         /// @details the cosine is randomly picked for a uniform distribution from -1 to 1 and then the angle is computed through the acos operator.
@@ -74,7 +75,13 @@ namespace PICsimulator {
     private:
 
         /// Diameter of the particles
-        double d12;
+        std::vector<double> d12;
+
+        // TODO: make setter/initializer for temperature and simulated viscosity
+        /// @brief reference temperature
+        double temp_ref = 300; /*K*/
+        /// @brief simulated viscosity
+        double viscosity = 1.8e-5; /*Pa s*/
 
     }; // end HardSphere
 
@@ -87,8 +94,10 @@ namespace PICsimulator {
         using location_type = typename Simulator<dim>::location_type;
         using particle_index = types::particle_index;
         using particle_iterator = typename Particles::ParticleHandler<dim>::particle_iterator;
+        using ph_type = typename Simulator<dim>::ph::type;
 
     public:
+        // TODO: do you actually need data_species?
         /// @brief Collisions Constructor
         explicit Collisions(Simulator<dim> * sim_):
             sim(sim_),
@@ -109,9 +118,10 @@ namespace PICsimulator {
         /// @details setup collision kernel and inititialize `sigma_cr_max`. Printing initial collision info.
         void initialize() {;
             // setup kernel
-            collision_kernel.set_diameter(data_species.get_diameter());
+            collision_kernel.set_diameter(data_species);
             // initialize `sigma_cr_max`
             sigma_cr_max = collision_kernel.compute_cross_section()*(data_species.get_mean_velocity() + 3.0*data_species.get_std_velocity());
+            // TODO: change method to compute sigma_cr_max
             /* 
             max velocity is computed as:
                 v_max = v_mean + 3*v_std
@@ -135,13 +145,10 @@ namespace PICsimulator {
         //// COLLISION PARAMENTERS
         
         /// species
-        Species::ChemicalSpecies data_species;
+        species_type data_species;
 
         /// maximum value between the cross section and the relative velocity
         double sigma_cr_max;
-
-        // /// weight of computational particles
-        // double weight = 100;
         
         //// COLLISION FUNCTIONS
 
@@ -304,20 +311,47 @@ namespace PICsimulator {
         set_velocity(it_j, v_j_new);
     }
 
+        template <int dim>
+    inline void HardSphere<dim>::set_diameter(const species_type &ms)
+    {
+        unsigned int L = ms.get_n_species();
+        unsigned int M = int(1/2 * L * (L-1));
+
+        d12.reserve(M);
+
+        for(unsigned int i = 0; i<M; ++M){
+            double mr = ms.get_reduced_mass(i);
+            double d2 = 5/16 * std::sqrt(BOLTZMANN_K*mr*temp_ref/
+                (M_PI))/viscosity;
+            d12.push_back(std::sqrt(d2));
+        }
+
+        std::cout << "-------- set ref diameters ----------\n";
+        std::cout << "d_ref = [ " << d12[0];
+        for (unsigned int i = 1; i<M; ++i){
+            std::cout << "\n         " << d12[i];
+        }
+        std::cout << " ]\n\n";
+    }
+
     /// compute the cross section.
     /// @details in 2D the cross section is the diameter
     template<>
-    inline double HardSphere<2>::compute_cross_section() const
+    inline double HardSphere<2>::compute_cross_section(
+        const unsigned int & k
+    ) const
     {
-        return d12;
+        return d12[k];
     }
 
     /// compute the cross section.
     /// @details in 3D the cross section is the circle area of the given diameter
     template<>
-    inline double HardSphere<3>::compute_cross_section() const
+    inline double HardSphere<3>::compute_cross_section(
+        const unsigned int & k
+    ) const
     {
-        return M_PI * d12*d12;
+        return M_PI * d12[k]*d12[k];
     }
 
 } // namespace PICsimulator
