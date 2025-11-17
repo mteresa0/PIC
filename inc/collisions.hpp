@@ -96,12 +96,14 @@ namespace PICsimulator {
         using particle_iterator = typename Particles::ParticleHandler<dim>::particle_iterator;
         using ph_type = typename Simulator<dim>::ph::type;
 
+        friend Species;
+
     public:
-        // TODO: do you actually need data_species?
+        // TODO: do you actually need ms?
         /// @brief Collisions Constructor
         explicit Collisions(Simulator<dim> * sim_):
             sim(sim_),
-            data_species(sim_->get_species())
+            ms(sim_->get_species())
         {};
         /// @brief Collisions Destructor
         ~Collisions() = default;
@@ -118,19 +120,25 @@ namespace PICsimulator {
         /// @details setup collision kernel and inititialize `sigma_cr_max`. Printing initial collision info.
         void initialize() {;
             // setup kernel
-            collision_kernel.set_diameter(data_species);
-            // initialize `sigma_cr_max`
-            sigma_cr_max = collision_kernel.compute_cross_section()*(data_species.get_mean_velocity() + 3.0*data_species.get_std_velocity());
-            // TODO: change method to compute sigma_cr_max
-            /* 
-            max velocity is computed as:
-                v_max = v_mean + 3*v_std
-            This value represents the 99.87th percentile for a velocity drawn from a normal distribution (which is not)
-            */
+            collision_kernel.set_diameter(ms);
+
+            double sigma_cr_max = collision_kernel.compute_cross_section(0) * 2*
+                            ms[0].get_max_velocity();
+
+            unsigned int k = 0;
+            for(unsigned int i = 0; i<ms.get_n_species(); ++i){
+                double max_v_i = ms[i].get_max_velocity();
+                for (unsigned int j = i; i.ms.get_n_species(); ++j){
+                    double max_v = std::max(max_v_i, ms[j].get_max_velocity());
+                    sigma_cr_max = std::max(sigma_cr_max, 
+                        max_v*2*collision_kernel.compute_cross_section(k)
+                    );
+                    ++k;
+                }
+            }
 
             std::cout << "---------- COLLISIONS INFO ------------\n";
             std::cout << "sigma_cr_max:    " << sigma_cr_max << std::endl;
-            std::cout << "sigma cr mean:   " << collision_kernel.compute_cross_section()*data_species.get_mean_velocity() << std::endl;
         }
 
     private:
@@ -145,7 +153,7 @@ namespace PICsimulator {
         //// COLLISION PARAMENTERS
         
         /// species
-        species_type data_species;
+        species_type ms;
 
         /// maximum value between the cross section and the relative velocity
         double sigma_cr_max;
@@ -173,7 +181,7 @@ namespace PICsimulator {
         const double number_density = sim->number_density;
         const double dt = sim->dt;
 
-        const double weight = data_species.get_weight();
+        const double weight = ms.get_weight();
 
         for (const auto & cell: dof_handler.active_cell_iterators())
         {

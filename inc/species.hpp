@@ -46,7 +46,9 @@ namespace PICsimulator::Species {
                 temperature(c_temperature),
                 pressure(c_pressure),
                 weight(c_weight),
-                computed_mass(c_weight*c_real_mass) {};
+                computed_mass(c_weight*c_real_mass),
+                scale_parameter(BOLTZMANN_K*temperature/ real_mass) 
+                {};
 
     public:
         /// @brief ChemicalSpecies destructor 
@@ -67,16 +69,19 @@ namespace PICsimulator::Species {
             return diameter;
         }
 
-        // TODO: add method to get max velocity (magnitude)
-        /// @brief get std velocity according to (?) TODO
-        double get_std_velocity() const {
+        /// @brief get scale parameter of the Maxwell distribution
+        double get_a() const {
             return BOLTZMANN_K * temperature / real_mass;
         }
 
-        /// @brief get mean velocity according to (?) 
-        // TODO: get reference
+        /// @brief get std of the Maxwell distribution
+        double get_std() const {
+            return (std::sqrt(3-8/M_PI))*scale_parameter;
+        }
+
+        /// @brief get mean velocity of the Maxwell distribution
         double get_mean_velocity() const {
-            return 2 * get_std_velocity() / std::sqrt(2.0 / M_PI);
+            return 2 * scale_parameter / std::sqrt(2.0 / M_PI);
         }
         
         /// @brief get free path length
@@ -87,6 +92,12 @@ namespace PICsimulator::Species {
         /// @brief get specie name
         const std::string get_name() const {return name;}
 
+        /// @brief get the 3 std from mean of the Maxwell distribution as the 
+        /// max velocity
+        double get_max_velocity() const {
+            return get_mean_velocity() + 3*get_std();
+        }
+
     private:
         const std::string name;
         const double real_mass; // kg
@@ -96,6 +107,9 @@ namespace PICsimulator::Species {
         const double pressure; // Pa
         const unsigned int weight;
         const double computed_mass; // kg
+        /// @brief scale parameter of the Boltzmann-Maxwell distribution
+        /// @details usually denoted as 'a'
+        const double scale_parameter;
     };
 
     // TODO: move this in a json file
