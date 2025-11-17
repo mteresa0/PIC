@@ -16,6 +16,7 @@
 #define SPECIES_PIC_HPP
 
 #include "utilities.hpp"
+#include <algorithm>
 
 namespace PICsimulator::Species {
 
@@ -152,7 +153,6 @@ namespace PICsimulator::Species {
             n_combinations(1/2*n_species*(n_species-1)),
             reduced_mass(n_combinations)
         {
-            std::cout << n_species << "   " << n_particles.size() << std::endl;
             if (n_species!=n_particles.size()){
                 std::string error_msg = 
                     "Invalid argument: The 'species' vector size (" +
@@ -217,6 +217,61 @@ namespace PICsimulator::Species {
 
     const double & get_reduced_mass(const unsigned int & i) const {
         return reduced_mass[i];
+    };
+
+
+    //// indexes functions
+    /// @brief compute the combination index of two species
+    /// @param i index of the first species
+    /// @param j index of the second species
+    /// @details the combined index is computed such that `i` is always greater 
+    /// or equal to `j`
+    unsigned int combination_index(
+        unsigned int i, 
+        unsigned int j) const
+    {
+        if(i>j) {
+            std::swap(i, j);
+        }
+
+        unsigned int k = j;
+        for (unsigned int ii = 0; ii<i; ++ii)
+        {
+            k += n_species-1-ii;
+        }
+
+        return k;
+    };
+
+    /// @brief compute the indexes of the species given the combination index
+    /// @param k combination index of species `i` and `j`
+    /// @param i index of the first species
+    /// @param j index of the second species
+    /// @details the combined index is computed such that `i` is always greater 
+    /// or equal to `j`
+    void species_indexes(
+        const unsigned int & k,
+        unsigned int & i,
+        unsigned int & j) const 
+    {
+        unsigned int k1 = k;
+        unsigned int l1 = n_species;
+
+        for (i = 0 ; i<n_species; ++i){
+            // std::cout << "\ni = " << i;
+            // std::cout << "\nj = " << j;
+            // std::cout << "\nl1= " << l1;
+            // std::cout << "\nk1= " << k1 << "\n";
+            
+            if(k1>=l1){
+                k1 -=l1;
+                l1 -=1;
+            } else  {
+                j = k1 +i;
+                break;
+            }
+        }
+        return;
     };
 
     private:
