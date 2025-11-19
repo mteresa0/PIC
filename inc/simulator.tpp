@@ -26,7 +26,11 @@ particle_handlers(n_species),
 domain_data(domain_data_),
 streaming_algorithm(this),
 collision_handler(this)
-{};
+{
+    std::cout << "\n\n simulator constructor\n";
+    std::cout << "n_species (s): " << n_species << std::endl;
+    std::cout << "n_species (m): " << species.get_n_species() << std::endl;
+};
 
 template<int dim>
 void PICsimulator::Simulator<dim>::run() {
@@ -146,6 +150,7 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     auto lower_vertex = domain_data.get_lower_vertex();
 
     for (unsigned int i = 0; i<n_species; ++i) {
+        std::cout << "n_species = " << n_species <<"\n";
         // generate random position for each particle. store positions in a vector
         std::vector<Point<dim>> positions(species.get_n_particles(i));    
         for(auto & position : positions){

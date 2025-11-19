@@ -164,9 +164,12 @@ namespace PICsimulator::Species {
         ):  species_vec(sp_vec_),
             n_particles(n_particles_),
             n_species(species_vec.size()),
-            n_combinations(1/2*n_species*(n_species-1)),
+            n_combinations(int(0.5*n_species*(n_species+1))),
             reduced_mass(n_combinations)
         {
+            std::cout << "\n\nn_species :         " << n_species << "\n";
+            std::cout << "n_particles.size() :" << n_particles.size() << "\n";
+            std::cout << "n_combinations :    " << n_combinations << "   " << int(0.5*n_species*(n_species+1)) <<  "\n";
             if (n_species!=n_particles.size()){
                 std::string error_msg = 
                     "Invalid argument: The 'species' vector size (" +
@@ -179,9 +182,9 @@ namespace PICsimulator::Species {
 
             // initialize reduced_mass vector
             unsigned int k = 0;
-            for (unsigned int i = 0; i<n_combinations; ++i) {
+            for (unsigned int i = 0; i<n_species; ++i) {
                 double m_i(species_vec[i].get_mass());
-                for (unsigned int j = 0; j<n_combinations; ++j){
+                for (unsigned int j = i; j<n_species; ++j){
                     double m_j(species_vec[j].get_mass());
                     reduced_mass[k] = m_i*m_j/(m_i+m_j);
                     ++k;
@@ -203,7 +206,8 @@ namespace PICsimulator::Species {
     
     /// @brief get the number of particles of the i-specie
     /// @param i 
-    unsigned int get_n_particles(const unsigned int i ) const {    
+    unsigned int get_n_particles(const unsigned int i ) const {  
+        std::cout << "\ni = " << i << "\n";
         if (i >= n_particles.size()) { 
             throw std::out_of_range("Index out of bounds for n_particles");
         }

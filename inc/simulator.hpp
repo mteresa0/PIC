@@ -127,8 +127,6 @@ namespace PICsimulator{
         // /// @brief number of particles in the simulation
         // const unsigned int n_particles;
 
-        const unsigned int n_species;
-
         /// @brief time step
         const double dt;
 
@@ -137,6 +135,8 @@ namespace PICsimulator{
 
         /// species
         species_type species;
+
+        const unsigned int n_species;
 
         /// @brief cell volume
         double cell_volume;

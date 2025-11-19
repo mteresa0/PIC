@@ -125,13 +125,13 @@ namespace PICsimulator {
             // setup kernel
             collision_kernel.set_diameter(ms);
 
-            double sigma_cr_max = collision_kernel.compute_cross_section(0) * 2*
+            sigma_cr_max = collision_kernel.compute_cross_section(0) * 2*
                             ms[0].get_max_velocity();
 
             unsigned int k = 0;
             for(unsigned int i = 0; i<ms.get_n_species(); ++i){
                 double max_v_i = ms[i].get_max_velocity();
-                for (unsigned int j = i; i<ms.get_n_species(); ++j){
+                for (unsigned int j = i; j<ms.get_n_species(); ++j){
                     double max_v = std::max(max_v_i, ms[j].get_max_velocity());
                     sigma_cr_max = std::max(sigma_cr_max, 
                         max_v*2*collision_kernel.compute_cross_section(k)
@@ -177,6 +177,7 @@ namespace PICsimulator {
     template <int dim, class T>
     inline void Collisions<dim, T>::apply_collisions()
     {
+
         // get the particle handler and dof handler
         std::vector<ph_type>& particle_handlers(sim->particle_handlers);
         const DoFHandler<dim>& dof_handler(sim->dof_handler);
@@ -199,18 +200,24 @@ namespace PICsimulator {
             if (N_pic_tot < 2){
                 continue;
             }
+            std::cout << "\n\n------------\n";
+            std::cout << "N_pic_tot =  " << N_pic_tot << std::endl; 
 
             // compute fractions of collision for each combination
-            std::vector<particle_index> coll_comb_frac(ms.n_combinations);
+            std::vector<double> coll_comb_frac(ms.n_combinations);
             {
             unsigned int k = 0;
+            double total_collisions = (0.5*N_pic_tot*(N_pic_tot-1));
+            // std::cout << "total collisions =  " << total_collisions << std::endl; 
             for (unsigned int i = 0; i<ms.get_n_species(); ++i) {
-                coll_comb_frac[k] = (
-                    0.5*n_pic[i]*(n_pic[i]-1))/(0.5*N_pic_tot*(N_pic_tot-1));
+                coll_comb_frac[k] = 
+                    ((0.5*n_pic[i]*(n_pic[i]-1))/total_collisions);
+                // std::cout << "perc[" << k << "]:" << coll_comb_frac[k] << std::endl;
                     ++k;
                 for (unsigned int j = i+1; j<ms.get_n_species(); ++j){
                     coll_comb_frac[k] = 
-                        (n_pic[i]*n_pic[j])/(0.5*N_pic_tot*(N_pic_tot-1));
+                        ((n_pic[i]*n_pic[j])/total_collisions);
+                // std::cout << "perc[" << k << "]:" << coll_comb_frac[k]  << std::endl;
                     ++k;
                 }
             }
@@ -218,7 +225,7 @@ namespace PICsimulator {
 
             // get the volume of the cell
             auto cell_volume = cell->measure();
-
+            std::cout << "cell_volume = " << cell_volume << std::endl;
             // double n = number_density*cell_volume;
 
             const double weight = ms[0].get_weight();
@@ -229,10 +236,16 @@ namespace PICsimulator {
             // double N_coll_max_double_ = 0.5*N*number_density*weight*sigma_cr_max*dt;
             // std::cout << N_coll_max_double <<  "       " << N_coll_max_double_ << std::endl;
             unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
-            unsigned int N_pair_tested = std::floor(N_pic_tot/2);
+            unsigned int N_pair_tested = static_cast<unsigned int>(std::floor(N_pic_tot/2.0));
             if (N_pair_tested > N_coll_max) {
                 N_pair_tested = N_coll_max;
             }
+        
+        // std::cout << N_coll_max << "    " << N_pair_tested <<std::endl;
+        // std::cout << "\nsigma_cr_max:     " <<  sigma_cr_max << std::endl;
+        // std::cout << "N_coll_max:       " <<  N_coll_max << std::endl;
+        std::cout << "N_pair_tested:    " <<  N_pair_tested << std::endl;
+        // std::cout << "N_pic_tot:        " <<  N_pic_tot << std::endl;
             double F_correction = N_coll_max/N_pair_tested;
 
             // std::cout << "# collisions in cell " << cell->index() << " : " << N_coll_max << "    "<< N_pair_tested  << "    F_corr: "  << F_correction<< std::endl;
@@ -241,7 +254,7 @@ namespace PICsimulator {
                 auto pic1 = particle_handlers[ind1].particles_in_cell(cell);
                 // get the begin iterator of the particles in the cell
                 const auto & pic_begin1 = pic1.begin();  
-                for (unsigned int ind2=ind1+1; ind2<ms.get_n_species(); ++ind2){
+                for (unsigned int ind2=ind1; ind2<ms.get_n_species(); ++ind2){
                 
                 // combination index
                 unsigned int ind_comb = ms.combination_index(ind1, ind2);
@@ -252,7 +265,16 @@ namespace PICsimulator {
                 // get the begin iterator of the particles in the cell
                 const auto & pic_begin2 = pic2.begin(); 
 
-                unsigned int N_pair_tested_comb = N_pair_tested*coll_comb_frac[ind_comb];           
+                std::cout << "\nN_pair_tested[" << ind_comb << "] double= " << N_pair_tested * coll_comb_frac[ind_comb] << std::endl;  
+                std::cout << "perc_coll[" << ind_comb << "] = " << coll_comb_frac[ind_comb] << std::endl;  
+
+                unsigned int N_pair_tested_comb = std::floor(N_pair_tested*coll_comb_frac[ind_comb] + 0.5);  
+
+                // std::cout << "i =  " << ind1 << std::endl;
+                // std::cout << "j =  " << ind2 << std::endl;
+                std::cout << "N_pair_tested[" << ind_comb << "] = " << N_pair_tested_comb << std::endl;  
+                
+                // F_correction = N_coll_max*coll_comb_frac[ind_comb]/N_pair_tested_comb; 
                 
                 for (unsigned int k = 0; k<N_pair_tested_comb; )
                 {
@@ -292,9 +314,10 @@ namespace PICsimulator {
                     // pick random double [0, 1)
                     double U = Random::rnd_uniform();
 
-                    // if(P_coll>1.0){
-                    //     std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
-                    // }
+                    if(P_coll>1.0){
+                        std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
+                    }
+                    // std::cout << "P_coll:" << P_coll  << ";  U: " <<  U<< std::endl;
 
                     if (U < P_coll)
                     {
@@ -366,14 +389,14 @@ namespace PICsimulator {
         template <int dim>
     inline void HardSphere<dim>::set_diameter(const species_type &ms)
     {
-        unsigned int L = ms.get_n_species();
-        unsigned int M = int(1/2 * L * (L-1));
+        // unsigned int L = ms.get_n_species();
+        unsigned int M = ms.n_combinations;
 
         d12.reserve(M);
 
-        for(unsigned int i = 0; i<M; ++M){
+        for(unsigned int i = 0; i<M; ++i){
             double mr = ms.get_reduced_mass(i);
-            double d2 = 5/16 * std::sqrt(BOLTZMANN_K*mr*temp_ref/
+            double d2 = 5.0/16.0 * std::sqrt(BOLTZMANN_K*mr*temp_ref/
                 (M_PI))/viscosity;
             d12.push_back(std::sqrt(d2));
         }
@@ -381,7 +404,7 @@ namespace PICsimulator {
         std::cout << "-------- set ref diameters ----------\n";
         std::cout << "d_ref = [ " << d12[0];
         for (unsigned int i = 1; i<M; ++i){
-            std::cout << "\n         " << d12[i];
+            std::cout << "\n          " << d12[i];
         }
         std::cout << " ]\n\n";
     }
