@@ -33,7 +33,8 @@ namespace PICsimulator {
         ~CollisionKernel() = default;
 
         /// compute cross section method (pure virtual)
-        virtual double compute_cross_section(/*const Point<dim> & */) const = 0;
+        virtual double compute_cross_section(
+            const unsigned int & /*, const Point<dim> & */) const = 0;
 
         /// compute deflaction angle chi
         virtual double get_chi(/*const Point<dim> & */) const = 0;
@@ -61,13 +62,15 @@ namespace PICsimulator {
         void set_diameter(const species_type& ms);
 
         /// @brief Compute deflection angle chi.
-        /// @details the cosine is randomly picked for a uniform distribution from -1 to 1 and then the angle is computed through the acos operator.
+        /// @details the cosine is randomly picked for a uniform distribution 
+        /// from -1 to 1 and then the angle is computed through the acos operator.
         double get_chi(/*const Point<dim> & relative velocity*/) const override{
             return std::acos(Random::rnd_uniform(-1., 1));
         }
 
         /// @brief Compute the deflection angle epsilon
-        /// @details The angle is randomly pick for an uniform distribution between -PI and PI.
+        /// @details The angle is randomly pick for an uniform distribution 
+        /// between -PI and PI.
         double get_epsilon() const override{
             return (Random::rnd_uniform(-M_PI, M_PI));
         }
@@ -92,11 +95,11 @@ namespace PICsimulator {
     class Collisions {
         using velocity_type = typename Simulator<dim>::velocity_type;
         using location_type = typename Simulator<dim>::location_type;
-        using particle_index = types::particle_index;
+        using particle_index = types::particle_index; // unsigned int
         using particle_iterator = typename Particles::ParticleHandler<dim>::particle_iterator;
-        using ph_type = typename Simulator<dim>::ph::type;
+        using ph_type = typename Simulator<dim>::ph_type;
 
-        friend Species;
+        friend Species::MultiSpecie;
 
     public:
         // TODO: do you actually need ms?
@@ -128,7 +131,7 @@ namespace PICsimulator {
             unsigned int k = 0;
             for(unsigned int i = 0; i<ms.get_n_species(); ++i){
                 double max_v_i = ms[i].get_max_velocity();
-                for (unsigned int j = i; i.ms.get_n_species(); ++j){
+                for (unsigned int j = i; i<ms.get_n_species(); ++j){
                     double max_v = std::max(max_v_i, ms[j].get_max_velocity());
                     sigma_cr_max = std::max(sigma_cr_max, 
                         max_v*2*collision_kernel.compute_cross_section(k)
@@ -175,107 +178,148 @@ namespace PICsimulator {
     inline void Collisions<dim, T>::apply_collisions()
     {
         // get the particle handler and dof handler
-        Particles::ParticleHandler<dim>& ph(sim->particle_handler);
+        std::vector<ph_type>& particle_handlers(sim->particle_handlers);
         const DoFHandler<dim>& dof_handler(sim->dof_handler);
 
-        const double number_density = sim->number_density;
+        // const double number_density = sim->number_density;
         const double dt = sim->dt;
-
-        const double weight = ms.get_weight();
 
         for (const auto & cell: dof_handler.active_cell_iterators())
         {
-            particle_index N = ph.n_particles_in_cell(cell);
+            // compute n particles in cell for each species and the total number
+            // of particles in cell 
+            std::vector<particle_index> n_pic(ms.get_n_species());
+            particle_index N_pic_tot = 0;            
+            for( unsigned int i = 0; i<ms.get_n_species(); ++i){
+                n_pic[i] = particle_handlers[i].n_particles_in_cell(cell);
+                N_pic_tot += n_pic[i];
+            }
 
             // skip cell containing less than 2 particles
-            if (N < 2){
+            if (N_pic_tot < 2){
                 continue;
             }
-            // std::cout << "# particles in cell "<< cell->index() <<" : " << N << std::endl;
-            
-            // get the particles in the cell
-            auto pic = ph.particles_in_cell(cell);
-            // get the begin iterator of the particles in the cell
-            const auto & pic_begin = pic.begin();            
+
+            // compute fractions of collision for each combination
+            std::vector<particle_index> coll_comb_frac(ms.n_combinations);
+            {
+            unsigned int k = 0;
+            for (unsigned int i = 0; i<ms.get_n_species(); ++i) {
+                coll_comb_frac[k] = (
+                    0.5*n_pic[i]*(n_pic[i]-1))/(0.5*N_pic_tot*(N_pic_tot-1));
+                    ++k;
+                for (unsigned int j = i+1; j<ms.get_n_species(); ++j){
+                    coll_comb_frac[k] = 
+                        (n_pic[i]*n_pic[j])/(0.5*N_pic_tot*(N_pic_tot-1));
+                    ++k;
+                }
+            }
+            }
 
             // get the volume of the cell
             auto cell_volume = cell->measure();
+
             // double n = number_density*cell_volume;
 
+            const double weight = ms[0].get_weight();
+
             // compute number of collisions
-            double N_coll_max_double = 0.5*N*(N-1)*weight*sigma_cr_max*dt / cell_volume;
+            double N_coll_max_double = 
+                0.5*N_pic_tot*(N_pic_tot-1)*weight*sigma_cr_max*dt / cell_volume;
             // double N_coll_max_double_ = 0.5*N*number_density*weight*sigma_cr_max*dt;
             // std::cout << N_coll_max_double <<  "       " << N_coll_max_double_ << std::endl;
             unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
-            unsigned int N_pair_tested = std::floor(N/2);
+            unsigned int N_pair_tested = std::floor(N_pic_tot/2);
             if (N_pair_tested > N_coll_max) {
                 N_pair_tested = N_coll_max;
             }
             double F_correction = N_coll_max/N_pair_tested;
-            
+
             // std::cout << "# collisions in cell " << cell->index() << " : " << N_coll_max << "    "<< N_pair_tested  << "    F_corr: "  << F_correction<< std::endl;
 
-            for (unsigned int k = 0; k<N_pair_tested; )
-            {
-                // select two particles
-                unsigned int i = static_cast<unsigned int>(std::floor(Random::rnd_uniform() * N));
-                unsigned int j = static_cast<unsigned int>(std::floor(Random::rnd_uniform() * N));
-                while (i==j) {
-                    j = static_cast<unsigned int>(std::floor(Random::rnd_uniform() * N));
-                }
+            for (unsigned int ind1 = 0; ind1<ms.get_n_species(); ++ind1) {
+                auto pic1 = particle_handlers[ind1].particles_in_cell(cell);
+                // get the begin iterator of the particles in the cell
+                const auto & pic_begin1 = pic1.begin();  
+                for (unsigned int ind2=ind1+1; ind2<ms.get_n_species(); ++ind2){
+                
+                // combination index
+                unsigned int ind_comb = ms.combination_index(ind1, ind2);
 
-                // get the two particles
-                auto it_i = std::next(pic_begin, i);
-                auto it_j = std::next(pic_begin, j);
+                // get the particles in the cell
+                auto pic2 = particle_handlers[ind2].particles_in_cell(cell);
 
-                // get the velocities of the two particles
-                velocity_type v_i(get_velocity_from_properties(it_i));
-                velocity_type v_j(get_velocity_from_properties(it_j));
+                // get the begin iterator of the particles in the cell
+                const auto & pic_begin2 = pic2.begin(); 
 
-                // compute the relative velocity
-                velocity_type cr(v_i - v_j);
-                const double cr_norm(cr.norm());
-
-                // compute system velocity
-                velocity_type cm((v_i + v_j) / 2.0);
-
-                // compute cross section
-                double sigma = collision_kernel.compute_cross_section();
-        
-                // compute collision probability
-                double P_coll = (F_correction * sigma * cr_norm )/ sigma_cr_max;
-
-                // pick random double [0, 1)
-                double U = Random::rnd_uniform();
-
-                // if(P_coll>1.0){
-                //     std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
-                // }
-
-                if (U < P_coll)
+                unsigned int N_pair_tested_comb = N_pair_tested*coll_comb_frac[ind_comb];           
+                
+                for (unsigned int k = 0; k<N_pair_tested_comb; )
                 {
-                    // compute post collisional relative velocity
-                    velocity_type cr_ = compute_post_collisional_velocity(cr);
+                    // select two particles
+                    unsigned int i = static_cast<unsigned int>(
+                        std::floor(Random::rnd_uniform() * n_pic[ind1]));
+                    unsigned int j = static_cast<unsigned int>(
+                        std::floor(Random::rnd_uniform() * n_pic[ind2]));
+                    if(ind1==ind2){
+                        while (i==j) {
+                            j = static_cast<unsigned int>(
+                                std::floor(Random::rnd_uniform() * n_pic[ind1]));
+                        }
+                    }
 
-                    // compute and update new velocities
-                    update_velocities(it_i, it_j, cm, cr_);
+                    // get the two particles
+                    auto it_i = std::next(pic_begin1, i);
+                    auto it_j = std::next(pic_begin2, j);
 
-                    ++k;
+                    // get the velocities of the two particles
+                    velocity_type v_i(get_velocity_from_properties(it_i));
+                    velocity_type v_j(get_velocity_from_properties(it_j));
 
-                    if (sigma * cr_norm > sigma_cr_max)
+                    // compute the relative velocity
+                    velocity_type cr(v_i - v_j);
+                    const double cr_norm(cr.norm());
+
+                    // compute system velocity
+                    velocity_type cm((v_i + v_j) / 2.0);
+
+                    // compute cross section
+                    double sigma = collision_kernel.compute_cross_section(ind_comb);
+            
+                    // compute collision probability
+                    double P_coll = (F_correction * sigma * cr_norm )/ sigma_cr_max;
+
+                    // pick random double [0, 1)
+                    double U = Random::rnd_uniform();
+
+                    // if(P_coll>1.0){
+                    //     std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
+                    // }
+
+                    if (U < P_coll)
                     {
-                        sigma_cr_max = sigma * cr_norm;
-                        std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
+                        // compute post collisional relative velocity
+                        velocity_type cr_ = compute_post_collisional_velocity(cr);
+
+                        // compute and update new velocities
+                        update_velocities(it_i, it_j, cm, cr_);
+
+                        ++k;
+
+                        if (sigma * cr_norm > sigma_cr_max)
+                        {
+                            sigma_cr_max = sigma * cr_norm;
+                            std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
+                        }
                     }
                 }
-            }
+            }}
         }
     } // end apply_collisions
 
     template <int dim, class T>
     Tensor<1, dim> Collisions<dim, T>::compute_post_collisional_velocity(const velocity_type & cr) const
     {
-
         // initialize post-collisional relative velocity
         velocity_type cr_;
 
