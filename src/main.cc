@@ -25,11 +25,13 @@ int main() {
     Point<dim> upper_vertex(5e-7, 5e-7);
     Domain::PeriodicDomain<dim> domain_data(lower_vertex, upper_vertex);
 
-    Species::N2 species;
+    std::vector<Species::ChemicalSpecies> species({Species::N2(), Species::O2()});
 
-    double dt = species.get_free_path() / species.get_mean_velocity();
+    Species::MultiSpecie ms(species, {100, 100});
 
-    PICsimulator::Simulator<dim> simulator(dt, 100*dt, 5, species, domain_data);
+    double dt = species[0].get_free_path() / species[0].get_mean_velocity();
+
+    PICsimulator::Simulator<dim> simulator(dt, 100*dt, ms, domain_data);
 
     simulator.run();
     

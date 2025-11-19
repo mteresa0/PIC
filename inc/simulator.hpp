@@ -23,7 +23,6 @@
 #include <deal.II/particles/data_out.h>
 
 #include <fstream>
-#include <random>
 #include <type_traits>
 
 #include "utilities.hpp"
@@ -106,8 +105,6 @@ namespace PICsimulator{
         };
 
     private:
-        /// species
-        species_type species;
        
         /// @brief It handles lost particles and reinsert them in the domain.
         /// This function is called when a particle leaves the domain and it 
@@ -137,6 +134,9 @@ namespace PICsimulator{
 
         /// @brief total simulation time
         const double T;
+
+        /// species
+        species_type species;
 
         /// @brief cell volume
         double cell_volume;
@@ -188,7 +188,7 @@ namespace PICsimulator{
         Streaming<dim> streaming_algorithm;
 
         /// @brief collision object. It handles the collisions of the particles.
-        // Collisions<dim, HardSphere<dim>> collision_handler;
+        Collisions<dim, HardSphere<dim>> collision_handler;
         // TODO: generalize for different kernels
 
         /// @brief insert particles (dummy, it will be replaced)

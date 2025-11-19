@@ -24,8 +24,8 @@ mapping(1),
 dof_handler(triangulation),
 particle_handlers(n_species),
 domain_data(domain_data_),
-streaming_algorithm(this)
-// collision_handler(this)
+streaming_algorithm(this),
+collision_handler(this)
 {};
 
 template<int dim>
@@ -61,9 +61,17 @@ void PICsimulator::Simulator<dim>::run() {
 
         std::cout << "time step: " << i << std::endl;
 
-        // collision_timer.tic();
-        // collision_handler.apply_collisions();
-        // collision_timer.toc();
+        // sort particles into cells
+        sorting_timer.tic();
+        for(auto & ph: particle_handlers){
+            ph.sort_particles_into_subdomains_and_cells();
+        }
+        sorting_timer.toc();
+
+        // apply collisions
+        collision_timer.tic();
+        collision_handler.apply_collisions();
+        collision_timer.toc();
 
         // to check the kinetic enegies
         {
@@ -85,13 +93,6 @@ void PICsimulator::Simulator<dim>::run() {
                 ++it_ph;
             }
         }
-
-        // sort particles into cells
-        sorting_timer.tic();
-        for(auto & ph: particle_handlers){
-            ph.sort_particles_into_subdomains_and_cells();
-        }
-        sorting_timer.toc();
 
         // print data to files
         print_data_to_files(i);
@@ -175,7 +176,7 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
         for(auto it = particle_handlers[i].begin(); it!=particle_handlers[i].end(); ++it){
             for(int d = 0; d<dim; ++d){
                 initial_velocity[d] = 
-                    Random::rnd_gaussian(0., species[i].get_std_velocity());
+                    Random::rnd_gaussian(0., species[i].get_a());
             }
             set_velocity(it, initial_velocity);
         }
@@ -242,7 +243,7 @@ void PICsimulator::Simulator<dim>::initialize()
 
     // compute and store data for grid and particles
     auto n_cells = triangulation.n_active_cells();
-    double cell_volume_, volume_domain, particles_per_cell;
+    double cell_volume_, volume_domain; //, particles_per_cell;
     double d_cell;
 
     for(auto & cell: dof_handler.active_cell_iterators()){
@@ -280,7 +281,7 @@ void PICsimulator::Simulator<dim>::initialize()
     }
 
     // initialize collisions
-    // collision_handler.initialize();
+    collision_handler.initialize();
 
     initialized = true;
     return;

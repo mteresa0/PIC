@@ -294,11 +294,15 @@ namespace PICsimulator::Species {
         /// @brief vecotr of particles numbers (corresponding to each specie)
         const std::vector<unsigned int> n_particles;
         /// @brief number of species
-        const unsigned int n_species;
+        const unsigned int n_species;    
 
-        const unsigned int n_combinations;        
+    public:
+        const unsigned int n_combinations;  
 
+    private:  
         std::vector<double> reduced_mass;
+
+
 
     };
     // TODO: add printing info method
