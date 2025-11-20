@@ -61,7 +61,7 @@ namespace PICsimulator{
     class Simulator{
 
         // only 2D and 3D are allowed
-        static_assert(dim==2||dim==3, "The dimension must must 2 or 3.");
+        static_assert(dim==2||dim==3, "The dimension must be 2 or 3.");
 
     public:
         using velocity_type = Tensor<1, dim>;
@@ -190,6 +190,10 @@ namespace PICsimulator{
         /// @brief collision object. It handles the collisions of the particles.
         Collisions<dim, HardSphere<dim>> collision_handler;
         // TODO: generalize for different kernels
+
+        #ifdef EXTRA_OUTPUTS
+        CSVoutput out_kinetic_energy{"outputs/total_kinetic_energy.csv", {"time", "total_kinetic_energy", "sum_particles_kinetic_energy"}};
+        #endif
 
         /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();

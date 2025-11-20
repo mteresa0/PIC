@@ -22,9 +22,25 @@
 
 // LOGGING OPTION for printing simulation info
 #if LOG_ENABLED
-    #define LOG(x) do { std::cout << x << std::endl; } while (0)
+    #define LOG(x) do { std::cout << x << std::endl; } while (0)    
+    #define LOGVAR(name, value) do { \
+        std::cout << std::left << std::setw(25) << (std::string(name) + ":") \
+                  << std::right << std::setw(15) << value << std::endl; \
+    } while(0)
+
+    inline std::string make_centered_title(const std::string &title, unsigned int width = 70, char fill = '-')
+    {
+        if (title.size() >= width)
+            return title;  // too long, just return as-is
+
+        int padding = (width - title.size()) / 2;
+        return std::string(padding, fill) + " " + title + " " + std::string(width - title.size() - padding, fill);
+    }
+    #define LOGTITLE(x) do {std::cout << "\n" << make_centered_title(x) << std::endl;} while(0)
 #else
-    #define LOG(x) do {} w  hile (0)
+    #define LOG(x) do {} while (0)
+    #define LOGVAR(x, y) do {} while(0)
+    #define LOGTITLE(x) do {} while(0)
 #endif
 
 // EXTRA OUTPUT OPTION to get detailed info of the simulation; this is important 

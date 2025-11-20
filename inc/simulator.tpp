@@ -26,24 +26,14 @@ particle_handlers(n_species),
 domain_data(domain_data_),
 streaming_algorithm(this),
 collision_handler(this)
-{
-    std::cout << "\n\n simulator constructor\n";
-    std::cout << "n_species (s): " << n_species << std::endl;
-    std::cout << "n_species (m): " << species.get_n_species() << std::endl;
-};
+{};
 
 template<int dim>
 void PICsimulator::Simulator<dim>::run() {
-    std::cout << "-------- starting initialization --------" << std::endl;
+    LOGTITLE("starting initialization");
     initialize();
 
     unsigned int NT = T/dt;
-    std::cout << "# timepsteps: " << NT;
-    std::cout << " ( dt: " << dt;
-    std::cout << "; T: "  << T << " )" << std::endl;
-
-    std::vector<double> total_kinetic_energy(NT, 0);
-    std::vector<double> sum_particles_kinetic_energy(NT, 0);
 
     // TODO: add option to not run timers
     Timers::Timer timer;
@@ -51,7 +41,7 @@ void PICsimulator::Simulator<dim>::run() {
     Timers::Cumulative_Timer streaming_timer;
     Timers::Cumulative_Timer collision_timer;
      
-    std::cout << "---------- starting simulation ----------" << std::endl;
+    LOGTITLE("starting simulation");
     timer.tic();
 
     for(unsigned int i = 0; i<NT; ++i){
@@ -63,7 +53,7 @@ void PICsimulator::Simulator<dim>::run() {
         }
         streaming_timer.toc();
 
-        std::cout << "time step: " << i << std::endl;
+        LOG("time step: " << i );
 
         // sort particles into cells
         sorting_timer.tic();
@@ -77,7 +67,10 @@ void PICsimulator::Simulator<dim>::run() {
         collision_handler.apply_collisions();
         collision_timer.toc();
 
+        #ifdef EXTRA_OUTPUTS
         // to check the kinetic enegies
+        double total_kinetic_energy(0.);
+        double sum_particles_kinetic_energy(0.);
         {
             unsigned int it_ph = 0;
             for (auto & ph : particle_handlers) {
@@ -88,18 +81,21 @@ void PICsimulator::Simulator<dim>::run() {
                     
                     // save kinetic energy per particle
                     double ke = species[it_ph].get_mass() * velocity.norm();
-                    sum_particles_kinetic_energy[i] += ke;
+                    sum_particles_kinetic_energy += ke;
                     sum_vels += velocity;
 
                 }
-                total_kinetic_energy[i] = ph.n_global_particles() * 
+                total_kinetic_energy = ph.n_global_particles() * 
                     species[it_ph].get_mass() * sum_vels.norm();
                 ++it_ph;
             }
         }
+        out_kinetic_energy.write_row({i*dt, total_kinetic_energy, sum_particles_kinetic_energy});
 
         // print data to files
         print_data_to_files(i);
+        #endif
+
     } // end of time loop
 
     // printing elapsed times
@@ -115,12 +111,6 @@ void PICsimulator::Simulator<dim>::run() {
     collision_timer.print(sim_time);
     }
 
-    // print kinetic energies into csv
-    std::ofstream output("outputs/total_kinetic_energy.csv");
-    output << "time, total_kinetic_energy, sum_particles_kinetic_energy\n";
-    for (unsigned int i = 0; i<NT; ++i){
-        output << i*dt << "," << total_kinetic_energy[i] << "," << sum_particles_kinetic_energy[i] << "\n";
-    }
 };
 
 template<int dim>
@@ -133,7 +123,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
 
     triangulation.refine_global(4);
 
-    std::cout << " * Grid created * " << std::endl;
+    LOG("\n * Grid created * ");
     domain_data.print_data_domain();
 
     std::ofstream out("outputs/grid.vtk");
@@ -150,7 +140,6 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     auto lower_vertex = domain_data.get_lower_vertex();
 
     for (unsigned int i = 0; i<n_species; ++i) {
-        std::cout << "n_species = " << n_species <<"\n";
         // generate random position for each particle. store positions in a vector
         std::vector<Point<dim>> positions(species.get_n_particles(i));    
         for(auto & position : positions){
@@ -167,7 +156,7 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
     set_initial_velocity();
 
     // printing message
-    std::cout << "Inserted particles\n";
+    LOG("Inserted particles");
 };
 
 template<int dim>
@@ -223,13 +212,12 @@ void PICsimulator::Simulator<dim>::initialize()
 {
     if (initialized)
     {
-        std::cout << "Already initialized with:" << std::endl;
-        // std::cout << "n# particles: " << particle_handler.n_global_particles() << std::endl;
-        std::cout << "n# cells: "     << triangulation.n_active_cells() << std::endl;
-
-        std::cout << " * Initialization skipped * " << std::endl;
-        std::cout << "!!! YOU ARE PROBABLY RUNNING AGAIN THE SIMULATION !!!" << std::endl;
-        return;
+        std::cerr << "\n============================== WARNING ==============================\n"
+        << " Simulation has already been initialized.\n"
+        << " The initialization step has been skipped.\n"
+        << " Please verify if running the simulation multiple times is intended.\n"
+        << "=====================================================================\n";
+        return;  
     }
 
     // initialize particles handlers
@@ -242,47 +230,32 @@ void PICsimulator::Simulator<dim>::initialize()
             }
         );
     }
+
     // initialize grid and particles
     make_grid();
     insert_particles_dummy();
 
+    {
     // compute and store data for grid and particles
     auto n_cells = triangulation.n_active_cells();
-    double cell_volume_, volume_domain; //, particles_per_cell;
-    double d_cell;
+    double volume_domain, sum_d, mean_d_cell, mean_cell_volume, cell_volume_;
 
     for(auto & cell: dof_handler.active_cell_iterators()){
         cell_volume_ = cell->measure();
         volume_domain += cell_volume_;
-        d_cell = cell->diameter();
+        sum_d += cell->diameter();
     }
-    // number_density = n_particles/volume_domain;
-    // particles_per_cell = static_cast<double>(n_particles)/n_cells;
 
-    cell_volume = volume_domain/n_cells;
+    mean_d_cell = sum_d/n_cells;
+    mean_cell_volume = volume_domain/n_cells;
 
     // printing data
-    {
-    // std::cout << "Number density: " << number_density << " #/m^dim"<< std::endl;
-    // std::cout << "Number of particles: " << n_particles << std::endl;
-    // std::cout << "Number of cells: " << n_cells << std::endl;
-    // std::cout << "Number of particles per cell: " 
-    //     << particles_per_cell << std::endl;
-    // std::cout << "Diameter of a cell: " << d_cell << std::endl;
-    // std::cout << "Volume of a cell: " 
-    //     << cell_volume << std::endl;
-    // std::cout << "Volume of the domain: " << volume_domain << std::endl;
-
-    // std::cout << "--------- species data ---------" << std::endl;
-    // std::cout << "mean velocity: " 
-    //     << species.get_mean_velocity() << std::endl;
-    // std::cout << "mean free path : " 
-    //     << species.get_free_path() << std::endl;
-
-    // std::cout << "time to exit a cell: " 
-    //     << d_cell / species.get_mean_velocity() << std::endl;
-    // std::cout << "time step: " 
-    //     << dt << std::endl;
+    LOGVAR("Number of cells", n_cells);
+    LOGVAR("Mean diameter of cells", mean_d_cell);
+    LOGVAR("Mean cell volume", mean_cell_volume);
+    LOGVAR("Domain volume", volume_domain);
+    LOGVAR("Timestep", dt);
+    LOGVAR("Number of timesteps", T/dt);
     }
 
     // initialize collisions
@@ -296,11 +269,11 @@ template<int dim>
 void PICsimulator::Simulator<dim>::print_data_to_files(
     const int  & i)
 {
-
+    // for (const auto ph : particle_handlers){
     // Particles::DataOut<dim> particle_out;
     
     // particle_out.build_patches( 
-    //     particle_handler,
+    //     ph,
     //     std::vector<std::string>(dim, "velocity"),
     //     std::vector<DataComponentInterpretation::DataComponentInterpretation>(
     //         dim, 
@@ -317,4 +290,5 @@ void PICsimulator::Simulator<dim>::print_data_to_files(
     //                     Utilities::int_to_string(i, 5) +
     //                     ".vtu");
     // particle_out.write_vtu(output);
+    // }
 }
