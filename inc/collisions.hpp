@@ -140,8 +140,8 @@ namespace PICsimulator {
                 }
             }
 
-            std::cout << "---------- COLLISIONS INFO ------------\n";
-            std::cout << "sigma_cr_max:    " << sigma_cr_max << std::endl;
+            LOG("---------- COLLISIONS INFO ------------");
+            LOG("sigma_cr_max:    " << sigma_cr_max);
         }
 
     private:
@@ -160,7 +160,11 @@ namespace PICsimulator {
 
         /// maximum value between the cross section and the relative velocity
         double sigma_cr_max;
-        
+
+        #ifdef EXTRA_OUTPUTS
+            CSVoutput out_iterations{"outputs/collisions_it.csv", {"P_coll", "F_correction", "sigma", "sigma/sigma_cr_max"}};
+            CSVoutput out_n_coll{"outputs/n_coll.csv", {"N_coll_max", "N_pait_tested", "N_pic_tot"}};    
+        #endif
         //// COLLISION FUNCTIONS
 
         /// compute post-collisional relative velocity
@@ -200,24 +204,19 @@ namespace PICsimulator {
             if (N_pic_tot < 2){
                 continue;
             }
-            std::cout << "\n\n------------\n";
-            std::cout << "N_pic_tot =  " << N_pic_tot << std::endl; 
 
             // compute fractions of collision for each combination
             std::vector<double> coll_comb_frac(ms.n_combinations);
             {
             unsigned int k = 0;
             double total_collisions = (0.5*N_pic_tot*(N_pic_tot-1));
-            // std::cout << "total collisions =  " << total_collisions << std::endl; 
             for (unsigned int i = 0; i<ms.get_n_species(); ++i) {
                 coll_comb_frac[k] = 
                     ((0.5*n_pic[i]*(n_pic[i]-1))/total_collisions);
-                // std::cout << "perc[" << k << "]:" << coll_comb_frac[k] << std::endl;
                     ++k;
                 for (unsigned int j = i+1; j<ms.get_n_species(); ++j){
                     coll_comb_frac[k] = 
                         ((n_pic[i]*n_pic[j])/total_collisions);
-                // std::cout << "perc[" << k << "]:" << coll_comb_frac[k]  << std::endl;
                     ++k;
                 }
             }
@@ -225,8 +224,6 @@ namespace PICsimulator {
 
             // get the volume of the cell
             auto cell_volume = cell->measure();
-            std::cout << "cell_volume = " << cell_volume << std::endl;
-            // double n = number_density*cell_volume;
 
             const double weight = ms[0].get_weight();
 
@@ -234,21 +231,24 @@ namespace PICsimulator {
             double N_coll_max_double = 
                 0.5*N_pic_tot*(N_pic_tot-1)*weight*sigma_cr_max*dt / cell_volume;
             // double N_coll_max_double_ = 0.5*N*number_density*weight*sigma_cr_max*dt;
-            // std::cout << N_coll_max_double <<  "       " << N_coll_max_double_ << std::endl;
             unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
             unsigned int N_pair_tested = static_cast<unsigned int>(std::floor(N_pic_tot/2.0));
             if (N_pair_tested > N_coll_max) {
                 N_pair_tested = N_coll_max;
             }
-        
-        // std::cout << N_coll_max << "    " << N_pair_tested <<std::endl;
-        // std::cout << "\nsigma_cr_max:     " <<  sigma_cr_max << std::endl;
-        // std::cout << "N_coll_max:       " <<  N_coll_max << std::endl;
-        std::cout << "N_pair_tested:    " <<  N_pair_tested << std::endl;
-        // std::cout << "N_pic_tot:        " <<  N_pic_tot << std::endl;
-            double F_correction = N_coll_max/N_pair_tested;
 
-            // std::cout << "# collisions in cell " << cell->index() << " : " << N_coll_max << "    "<< N_pair_tested  << "    F_corr: "  << F_correction<< std::endl;
+            #ifdef EXTRA_OUTPUTS
+            out_n_coll.write_row({
+                static_cast<double>(N_coll_max), 
+                static_cast<double>(N_pair_tested), 
+                static_cast<double>(N_pic_tot)});
+            #endif
+        
+            // double F_correction;
+            if (N_coll_max==0 && N_pair_tested==0){
+                continue;
+            }
+            double F_correction = N_coll_max/N_pair_tested;
 
             for (unsigned int ind1 = 0; ind1<ms.get_n_species(); ++ind1) {
                 auto pic1 = particle_handlers[ind1].particles_in_cell(cell);
@@ -265,16 +265,11 @@ namespace PICsimulator {
                 // get the begin iterator of the particles in the cell
                 const auto & pic_begin2 = pic2.begin(); 
 
-                std::cout << "\nN_pair_tested[" << ind_comb << "] double= " << N_pair_tested * coll_comb_frac[ind_comb] << std::endl;  
-                std::cout << "perc_coll[" << ind_comb << "] = " << coll_comb_frac[ind_comb] << std::endl;  
+                // get masses
+                const double mass1 = ms[ind1].get_mass();
+                const double mass2 = ms[ind2].get_mass();
 
                 unsigned int N_pair_tested_comb = std::floor(N_pair_tested*coll_comb_frac[ind_comb] + 0.5);  
-
-                // std::cout << "i =  " << ind1 << std::endl;
-                // std::cout << "j =  " << ind2 << std::endl;
-                std::cout << "N_pair_tested[" << ind_comb << "] = " << N_pair_tested_comb << std::endl;  
-                
-                // F_correction = N_coll_max*coll_comb_frac[ind_comb]/N_pair_tested_comb; 
                 
                 for (unsigned int k = 0; k<N_pair_tested_comb; )
                 {
@@ -303,7 +298,7 @@ namespace PICsimulator {
                     const double cr_norm(cr.norm());
 
                     // compute system velocity
-                    velocity_type cm((v_i + v_j) / 2.0);
+                    velocity_type cm((mass1*v_i + mass2*v_j) / (mass1+mass2));
 
                     // compute cross section
                     double sigma = collision_kernel.compute_cross_section(ind_comb);
@@ -314,10 +309,9 @@ namespace PICsimulator {
                     // pick random double [0, 1)
                     double U = Random::rnd_uniform();
 
-                    if(P_coll>1.0){
-                        std::cout << "P>1.0: " << P_coll << "      " << sigma * cr_norm << "    " << F_correction << "      "  << sigma_cr_max << std::endl;
-                    }
-                    // std::cout << "P_coll:" << P_coll  << ";  U: " <<  U<< std::endl;
+                    #ifdef EXTRA_OUTPUTS
+                    out_iterations.write_row({P_coll, F_correction, sigma*cr_norm, sigma*cr_norm/sigma_cr_max});
+                    #endif
 
                     if (U < P_coll)
                     {
@@ -332,7 +326,6 @@ namespace PICsimulator {
                         if (sigma * cr_norm > sigma_cr_max)
                         {
                             sigma_cr_max = sigma * cr_norm;
-                            std::cout << "sigma_cr_max: " << sigma_cr_max << std::endl;
                         }
                     }
                 }
@@ -378,9 +371,6 @@ namespace PICsimulator {
         velocity_type v_i_new(cm + cr_ / 2.0);
         velocity_type v_j_new(cm - cr_ / 2.0);
 
-        // std::cout << "v_i_new: " << norm(v_i_new);
-        // std::cout << "       v_j_new: " << norm(v_j_new) << std::endl;
-
         // set the new velocities
         set_velocity(it_i, v_i_new);
         set_velocity(it_j, v_j_new);
@@ -401,12 +391,30 @@ namespace PICsimulator {
             d12.push_back(std::sqrt(d2));
         }
 
-        std::cout << "-------- set ref diameters ----------\n";
-        std::cout << "d_ref = [ " << d12[0];
+        LOG("\n-------- set ref diameters ----------\n"
+         << "d_ref =  " << d12[0]);
         for (unsigned int i = 1; i<M; ++i){
-            std::cout << "\n          " << d12[i];
+            LOG("          " << d12[i]);
         }
-        std::cout << " ]\n\n";
+
+        LOG("\n-------- diameters species ----------\n"
+         << "d_ref =  " << ms[0].get_diameter());
+        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+            LOG("          " << ms[i].get_diameter());
+        }
+
+        LOG("\n-------- free path species ----------\n"
+        << "free path =  " << ms[0].get_free_path());
+        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+            LOG("              " << ms[i].get_free_path());
+        }
+
+        LOG("\n-------- dt species ----------\n"
+        << "dt =  " << ms[0].get_free_path()/ms[0].get_max_velocity());
+        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+            LOG("      " << ms[i].get_free_path()/ms[0].get_max_velocity());
+        }
+
     }
 
     /// compute the cross section.

@@ -20,6 +20,72 @@
 #include <iomanip> 
 #include <random>
 
+// LOGGING OPTION for printing simulation info
+#if LOG_ENABLED
+    #define LOG(x) do { std::cout << x << std::endl; } while (0)
+#else
+    #define LOG(x) do {} w  hile (0)
+#endif
+
+// EXTRA OUTPUT OPTION to get detailed info of the simulation; this is important 
+// if you would like to check if the simulation make sense. For example, you 
+// would like to have P_coll (collision probability) that do not exceed 20%, 
+// according to Boyd (chapter 6)
+#ifdef EXTRA_OUTPUTS
+    class CSVoutput{
+    public:
+        // filename: CSV file path
+        // headers: column names
+        // buffer_size: number of rows to keep in memory before writing to disk
+        CSVoutput(const std::string &filename, 
+                        const std::vector<std::string> &headers,
+                        std::size_t buffer_size = 1000)
+            : file(filename), buffer_size(buffer_size)
+        {
+            if(file.is_open()){
+                for(std::size_t i = 0; i < headers.size(); ++i){
+                    file << headers[i];
+                    if(i != headers.size() - 1) file << ",";
+                }
+                file << "\n";
+            }
+        }
+
+        ~CSVoutput() {
+            flush(); // write any remaining rows
+            if(file.is_open()) file.close();
+        }
+
+        // write a row of data
+        void write_row(const std::vector<double> &row) {
+            buffer.push_back(row);
+            if(buffer.size() >= buffer_size){
+                flush();
+            }
+        }
+
+            // flush the buffer to the file
+        void flush() {
+            for(const auto &row : buffer){
+                for(std::size_t i = 0; i < row.size(); ++i){
+                    file << row[i];
+                    if(i != row.size()-1) file << ",";
+                }
+                file << "\n";
+            }
+            buffer.clear();
+            file.flush(); // force flush to disk
+        }
+
+    private:
+        std::ofstream file;
+        std::vector<std::vector<double>> buffer; // buffer for rows
+        std::size_t buffer_size;
+
+    };
+
+#endif
+
 /// Boltzmann constant in J/K
 static const double BOLTZMANN_K = 1.380649e-23;  // J/K
 /// Temperature in K
@@ -66,7 +132,7 @@ namespace Timers {
 
         /// @brief print time elapsed
         void print() {
-            std::cout << dt << " seconds\n";
+            LOG(dt << " seconds\n");
         }
 
     private:
