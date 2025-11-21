@@ -27,19 +27,33 @@
         std::cout << std::left << std::setw(25) << (std::string(name) + ":") \
                   << std::right << std::setw(15) << value << std::endl; \
     } while(0)
+    #define LOGVEC(name, vector, dim) do { \
+        std::cout << std::left << std::setw(25-2) << (std::string(name) + ":")\
+        << "[ " << std::right << std::setw(12)  << vector[0];\
+        for(unsigned int i = 1; i<dim; ++i){ \
+            std::cout << ", \n" << std::setw(25) <<" "<< std::right<<  std::setw(12) << vector[i];\
+        } \
+        std::cout << " ]"<<std::endl;\
+    } while(0)
 
-    inline std::string make_centered_title(const std::string &title, unsigned int width = 70, char fill = '-')
+    inline std::string make_centered_title(
+        const std::string &title, 
+        unsigned int width = 70, 
+        char fill = '=')
     {
         if (title.size() >= width)
             return title;  // too long, just return as-is
 
         int padding = (width - title.size()) / 2;
-        return std::string(padding, fill) + " " + title + " " + std::string(width - title.size() - padding, fill);
+        return std::string(padding, fill) + " " + title + " " + 
+            std::string(width - title.size() - padding, fill);
     }
-    #define LOGTITLE(x) do {std::cout << "\n" << make_centered_title(x) << std::endl;} while(0)
+    #define LOGTITLE(x) do {std::cout << "\n" << make_centered_title(x) \
+        << std::endl;} while(0)
 #else
     #define LOG(x) do {} while (0)
     #define LOGVAR(x, y) do {} while(0)
+    #define LOGVEC(x, y, z) do {} while(0)
     #define LOGTITLE(x) do {} while(0)
 #endif
 
