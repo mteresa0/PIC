@@ -18,7 +18,7 @@ PICsimulator::Simulator<dim>::Simulator(
     const Domain::DomainData<dim> &domain_data_):
 dt(dt_),
 T(T_),
-species(species_),
+species(std::move(species_)),
 n_species(species.get_n_species()),
 mapping(1), 
 dof_handler(triangulation),

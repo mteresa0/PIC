@@ -36,21 +36,6 @@ namespace PICsimulator{
     // using namespace Timers;    
     using namespace dealii;
 
-    // TODO: move it in domain class
-    /// @brief default domain for the simulation. Lower and upper vertices are
-    /// of the unit square (2D) or unit cube (3D).
-    /// @tparam dim spatial dimension
-    template<int dim>
-    Domain::ReflectiveDomain<dim> default_domain;
-
-    /// @brief get the default domain for the simulation
-    /// @tparam dim spatial dimension
-    /// @return ReflectiveDomain<dim> with UnitSquare lower and upper vertices
-    template<int dim>
-    const Domain::DomainData<dim>& get_default_domain() {
-        return default_domain<dim>;  // Return reference to the instantiated object
-    }
-
     /// @brief Simulator class. 
     /// @tparam dim spatial dimension
     /// @details This class is the main class of the simulation. 
@@ -78,7 +63,8 @@ namespace PICsimulator{
             const double &dt_ = 1e-8,
             const double &T_ = 1e-5,
             const species_type & species_ = species_type (),
-            const Domain::DomainData<dim> & domain_data_ = get_default_domain<dim>());
+            const Domain::DomainData<dim> & domain_data_ = 
+                Domain::ReflectiveDomain<dim>());
         
         /// @brief run the simulation
         /// This is the method in which the simulatotion loop is defined.
@@ -192,7 +178,8 @@ namespace PICsimulator{
         // TODO: generalize for different kernels
 
         #ifdef EXTRA_OUTPUTS
-        CSVoutput out_kinetic_energy{"outputs/total_kinetic_energy.csv", {"time", "total_kinetic_energy", "sum_particles_kinetic_energy"}};
+        CSVoutput out_kinetic_energy{"outputs/total_kinetic_energy.csv", 
+            {"time", "total_kinetic_energy", "sum_particles_kinetic_energy"}};
         #endif
 
         /// @brief insert particles (dummy, it will be replaced)
