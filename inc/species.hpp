@@ -86,7 +86,8 @@ namespace PICsimulator::Species {
         
         /// @brief get free path length
         double get_free_path() const {
-            return (BOLTZMANN_K * temperature) / (std::sqrt(2) * M_PI * diameter * diameter * pressure);
+            return (BOLTZMANN_K * temperature) / (std::sqrt(2) * M_PI * 
+            diameter * diameter * pressure);
         }
 
         /// @brief get specie name
@@ -119,7 +120,7 @@ namespace PICsimulator::Species {
             /*name*/ "N2",
             /*real mass*/ 4.26e-26, /*kg*/
             /*charge*/ 0.0,
-            /*diameter*/ 3.0e-10,
+            /*diameter*/ 3.64e-10,
             /*temperature*/ 300.0,
             /*pressure*/ 1.0e5,
             /*weight*/ 30) {};
@@ -138,7 +139,7 @@ namespace PICsimulator::Species {
             /*name*/ "O2",
             /*real mass*/ 5.31339290530668e-26, /*kg*/
             /*charge*/ 0.0, /*C*/
-            /*diameter*/ 3.0e-10, /*m*/
+            /*diameter*/ 3.46e-10, /*m*/
             /*temperature*/ 300.0, /*K*/
             /*pressure*/ 1.0e5, /*Pa*/
             /*weight*/ 30) {};
@@ -167,9 +168,6 @@ namespace PICsimulator::Species {
             n_combinations(int(0.5*n_species*(n_species+1))),
             reduced_mass(n_combinations)
         {
-            std::cout << "\n\nn_species :         " << n_species << "\n";
-            std::cout << "n_particles.size() :" << n_particles.size() << "\n";
-            std::cout << "n_combinations :    " << n_combinations << "   " << int(0.5*n_species*(n_species+1)) <<  "\n";
             if (n_species!=n_particles.size()){
                 std::string error_msg = 
                     "Invalid argument: The 'species' vector size (" +
@@ -207,7 +205,6 @@ namespace PICsimulator::Species {
     /// @brief get the number of particles of the i-specie
     /// @param i 
     unsigned int get_n_particles(const unsigned int i ) const {  
-        std::cout << "\ni = " << i << "\n";
         if (i >= n_particles.size()) { 
             throw std::out_of_range("Index out of bounds for n_particles");
         }
