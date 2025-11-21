@@ -12,15 +12,10 @@
 
 #include "deal.II/base/point.h"
 #include "deal.II/base/tensor.h"
+#include <cmath>
 
 namespace Domain{    
     using namespace dealii;
-
-    enum boundary_type {
-        REFLECTIVE,
-        PERIODIC, 
-        INVALID // to be deleted
-    };
 
     namespace UnitSquare{
         /// @brief return the lower vertex of the unit square (2D) or unit cube (3D) 
@@ -63,8 +58,8 @@ namespace Domain{
         /// @param loc location of the particle (to be updated)
         /// @param vel velocity of the particle (to be updated)
         virtual void out_of_boundaries (
-            location_type & loc, 
-            velocity_type & vel) const;
+            location_type &, 
+            velocity_type &) const {};
 
         /// @brief returns the lower vertex of the domain
         /// @return
@@ -80,19 +75,10 @@ namespace Domain{
 
         /// @brief prints domain informations
         void print_data_domain() const {
-            std::cout << "---------- DOMAIN INFO ------------\n";
-            std::cout << "DOMAIN TYPE:      " << this->domainType() << std::endl;
-            std::cout << "lower vertex:      {";
-            for(unsigned d = 0; d<dim; ++d){
-                std::cout << "   " << lower_vertex[d];
-            }
-            std::cout << "   }\n";
-            std::cout << "upper vertex:      {";
-            for(unsigned d = 0; d<dim; ++d){
-                std::cout << "   " << upper_vertex[d];
-            }
-            std::cout << "   }\n";
-            std::cout << "-----------------------------------\n";
+            LOGTITLE("DOMAIN INFO");
+            LOGVAR("Domain type", this->domainType());
+            LOGVEC("Lower vertex", lower_vertex, dim);
+            LOGVEC("Upper vertex", upper_vertex, dim);
         }
 
     protected:
@@ -167,26 +153,33 @@ namespace Domain{
         return Point<3>(1,1,1);
     }
 
-    template <int dim>
-    inline void DomainData<dim>::out_of_boundaries(location_type &, velocity_type &) const
-    {
-        std::cout << "base datadomain" << std::endl;
-    }
-
     template<int dim>
     inline void ReflectiveDomain<dim>::out_of_boundaries(location_type & location, velocity_type & velocity) const
     {
+        location_type difference(this->upper_vertex - this->lower_vertex);
         for (int i = 0; i<dim; ++i){
-            while(location[i]<this->lower_vertex[i] || location[i]>this->upper_vertex[i]){
-                if (location[i]<this->lower_vertex[i]){
-                    location[i] = 2*this->lower_vertex[i]-location[i];
-                    velocity[i] = -velocity[i];
-                } else if (location[i]>this->upper_vertex[i]){
-                    location[i] = 2*this->upper_vertex[i]-location[i];
-                    velocity[i] = -velocity[i];
-                }
+            double loc_norm_i = location[i]-this->lower_vertex[i];
+            int n_lengths = std::floor(std::abs(loc_norm_i)/
+                            (difference[i]));
+
+            if (loc_norm_i<0) {++n_lengths;}
+            if (n_lengths==0) {continue;}
+
+            if (n_lengths%2==1){
+                double vertex = loc_norm_i>0 ? 
+                this->upper_vertex[i] : 
+                this->lower_vertex[i];
+                location[i] = -std::fmod(loc_norm_i, difference[i]) 
+                    + vertex;
+                velocity[i] = -velocity[i];
+            } else {
+                double vertex = loc_norm_i>0 ? 
+                this->lower_vertex[i] : 
+                this->upper_vertex[i];
+                location[i] = std::fmod(location[i]-this->lower_vertex[i], 
+                    difference[i]) + vertex;
             }
-        };   
+        }
         return;
     }
 
@@ -196,13 +189,11 @@ namespace Domain{
         location_type difference(this->upper_vertex - this->lower_vertex);
 
         for (int i = 0; i<dim; ++i){
-            while(location[i]<this->lower_vertex[i] || location[i]>this->upper_vertex[i]){
-                if (location[i]<this->lower_vertex[i]){
-                    location[i] += difference[i];
-                } else if (location[i]>this->upper_vertex[i]){
-                    location[i] -= difference[i];
-                }
-            }
+            double vertex = location[i]>this->lower_vertex[i] ? 
+                this->lower_vertex[i] : 
+                this->upper_vertex[i];
+            location[i] = std::fmod(location[i]-this->lower_vertex[i], difference[i]) 
+                        + vertex;
         }
         return;
     }
