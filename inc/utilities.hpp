@@ -133,7 +133,7 @@ namespace Timers {
             auto now = std::chrono::high_resolution_clock::now();
 
             if(!is_started) {
-                throw std::logic_error("Call toc() before get_dt()");
+                throw std::logic_error("Call tic() before get_dt()");
             }
             
             std::chrono::duration<double> diff = now - start;
@@ -289,7 +289,7 @@ namespace PICsimulator {
         std::uniform_real_distribution<double> uniform_distribution{0., 1.};
 
         /// @brief uniform distribution: [0, 1)
-        std::uniform_real_distribution<double> normal_distribution{0., 1.};
+        std::normal_distribution<double> normal_distribution{0., 1.};
 
         /// @brief returns a random double drawn for a uniform distribution 
         /// from 0 to 1.
