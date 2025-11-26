@@ -51,7 +51,7 @@ namespace PICsimulator{
     public:
         using velocity_type = Tensor<1, dim>;
         using location_type = Point<dim>;
-        using species_type = Species::MultiSpecie;
+        using species_type = Species::MultiSpecies;
         using ph_type = dealii::Particles::ParticleHandler<dim>;
 
         /// @brief Constructor of the Simulator class

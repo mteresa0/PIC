@@ -3,8 +3,6 @@
 #include "utilities.hpp"
 
 #include "test_simulators.hpp"
-
-// #include "deal.II/base/point.h"
 #include "deal.II/base/tensor.h"
 
 int main() {
@@ -27,7 +25,7 @@ int main() {
 
     std::vector<Species::ChemicalSpecies> species({Species::N2(), Species::O2()});
 
-    Species::MultiSpecie ms(species, {100, 100});
+    Species::MultiSpecies ms(species, {100, 100});
 
     double dt = species[0].get_free_path() / species[0].get_mean_velocity();
 

@@ -21,7 +21,7 @@ namespace PICsimulator {
 
     using namespace dealii;
 
-    using species_type = Species::MultiSpecie;
+    using species_type = Species::MultiSpecies;
 
    /// base class for different collisions algorithms.
     template<int dim>
@@ -99,7 +99,7 @@ namespace PICsimulator {
         using particle_iterator = typename Particles::ParticleHandler<dim>::particle_iterator;
         using ph_type = typename Simulator<dim>::ph_type;
 
-        friend Species::MultiSpecie;
+        friend Species::MultiSpecies;
 
     public:
         // TODO: do you actually need ms?

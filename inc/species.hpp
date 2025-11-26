@@ -1,13 +1,13 @@
 /**
  * @file species.hpp
  * @author Maria Teresa Cazzola 
- * @brief Defines the **ChemicalSpecies** and **MultiSpecie** classes for 
+ * @brief Defines the **ChemicalSpecies** and **MultiSpecies** classes for 
  * particle simulation. 
  * @details This header contains definitions for:
  * 1. The fundamental properties of a single particle type 
  * (@ref ChemicalSpecies).
  * 2. The container class for managing a complete mixture of species 
- * (@ref MultiSpecie).
+ * (@ref MultiSpecies).
  * 
  * @date 2025-10-30
  */
@@ -153,13 +153,13 @@ namespace PICsimulator::Species {
 
     // TODO: add constructor from json file
     /// @brief class containg all the info about the gas mixture. 
-    class MultiSpecie {
+    class MultiSpecies {
     public:
         /// @brief constructor
         /// @param sp_vec_ vector of species
         /// @param n_particles_ vector of particles number corresponding to each 
         /// specie
-        MultiSpecie(
+        MultiSpecies(
             const std::vector<ChemicalSpecies> & sp_vec_,
             const std::vector<unsigned int> n_particles_
         ):  species_vec(sp_vec_),
@@ -191,7 +191,7 @@ namespace PICsimulator::Species {
         };
 
     /// @brief default constructor
-    MultiSpecie() : MultiSpecie({N2()}, {1000}) {};
+    MultiSpecies() : MultiSpecies({N2()}, {1000}) {};
 
     /// @brief provides read-only array-like access to a specie
     /// @param i specie index
