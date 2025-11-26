@@ -111,6 +111,10 @@ namespace PICsimulator {
         /// @brief Collisions Destructor
         ~Collisions() = default;
 
+        /// @brief initialize collision framework
+        /// @details setup collision kernel and inititialize `sigma_cr_max`. Printing initial collision info.
+        void initialize();
+
         /// @brief Run the collision algorithm.
         /// @details This function iterates through each cell in the simulation,
         /// estimates the number of potential collisions and randomly selects
@@ -118,32 +122,7 @@ namespace PICsimulator {
         /// According to this probability the particle velocities are updated based
         /// on the proveded `collision_kernel`
         void apply_collisions();
-
-        /// @brief initialize collision framework
-        /// @details setup collision kernel and inititialize `sigma_cr_max`. Printing initial collision info.
-        void initialize() {;
-            // setup kernel
-            collision_kernel.set_diameter(ms);
-
-            sigma_cr_max = collision_kernel.compute_cross_section(0) * 2*
-                            ms[0].get_max_velocity();
-
-            unsigned int k = 0;
-            for(unsigned int i = 0; i<ms.get_n_species(); ++i){
-                double max_v_i = ms[i].get_max_velocity();
-                for (unsigned int j = i; j<ms.get_n_species(); ++j){
-                    double max_v = std::max(max_v_i, ms[j].get_max_velocity());
-                    sigma_cr_max = std::max(sigma_cr_max, 
-                        max_v*2*collision_kernel.compute_cross_section(k)
-                    );
-                    ++k;
-                }
-            }
-
-            LOGTITLE("COLLISIONS INFO");
-            LOGVAR("sigma_cr_max", sigma_cr_max);
-        }
-
+        
     private:
         //// DATA MEMBERS
 
@@ -153,8 +132,6 @@ namespace PICsimulator {
         /// collision kernel object
         T collision_kernel;
 
-        //// COLLISION PARAMENTERS
-        
         /// species
         const species_type& ms;
 
@@ -165,6 +142,7 @@ namespace PICsimulator {
             CSVoutput out_iterations{"outputs/collisions_it.csv", {"P_coll", "F_correction", "sigma", "sigma/sigma_cr_max"}};
             CSVoutput out_n_coll{"outputs/n_coll.csv", {"N_coll_max", "N_pait_tested", "N_pic_tot"}};    
         #endif
+
         //// COLLISION FUNCTIONS
 
         /// compute post-collisional relative velocity
@@ -176,7 +154,33 @@ namespace PICsimulator {
             particle_iterator & it_j,
             const velocity_type & cm,
             const velocity_type & cr_);
+
     }; // end class Collisions
+
+    template <int dim, class T>
+    inline void Collisions<dim, T>::initialize()
+    {
+        // setup kernel
+        collision_kernel.set_diameter(ms);
+
+        sigma_cr_max = collision_kernel.compute_cross_section(0) * 2*
+                        ms[0].get_max_velocity();
+
+        unsigned int k = 0;
+        for(unsigned int i = 0; i<ms.get_n_species(); ++i){
+            double max_v_i = ms[i].get_max_velocity();
+            for (unsigned int j = i; j<ms.get_n_species(); ++j){
+                double max_v = std::max(max_v_i, ms[j].get_max_velocity());
+                sigma_cr_max = std::max(sigma_cr_max, 
+                    max_v*2*collision_kernel.compute_cross_section(k)
+                );
+                ++k;
+            }
+        }
+
+        LOGTITLE("COLLISIONS INFO");
+        LOGVAR("sigma_cr_max", sigma_cr_max);
+    }
 
     template <int dim, class T>
     inline void Collisions<dim, T>::apply_collisions()
