@@ -170,6 +170,64 @@ namespace PICsimulator {
 
     }; // end class Collisions
 
+    /// compute the cross section.
+    /// @details in 2D the cross section is the diameter
+    template<>
+    inline double HardSphere<2>::compute_cross_section(
+        const unsigned int & k
+    ) const
+    {
+        return d12[k];
+    }
+
+    /// compute the cross section.
+    /// @details in 3D the cross section is the circle area of the given diameter
+    template<>
+    inline double HardSphere<3>::compute_cross_section(
+        const unsigned int & k
+    ) const
+    {
+        return M_PI * d12[k]*d12[k];
+    }
+
+    template <int dim>
+    inline void HardSphere<dim>::set_diameter(const species_type &ms)
+    {
+        // unsigned int L = ms.get_n_species();
+        unsigned int M = ms.n_combinations;
+
+        d12.reserve(M);
+
+        for(unsigned int i = 0; i<M; ++i){
+            double mr = ms.get_reduced_mass(i);
+            double d2 = 5.0/16.0 * std::sqrt(BOLTZMANN_K*mr*temp_ref/
+                (M_PI))/viscosity;
+            d12.push_back(std::sqrt(d2));
+        }
+
+        LOG("\n-------- set ref diameters ----------\n");
+        LOGVEC("d_ref", d12, M);
+
+        LOG("\n-------- diameters species ----------\n"
+         << "d_ref =  " << ms[0].get_diameter());
+        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+            LOG("          " << ms[i].get_diameter());
+        }
+
+        LOG("\n-------- free path species ----------\n"
+        << "free path =  " << ms[0].get_free_path());
+        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+            LOG("              " << ms[i].get_free_path());
+        }
+
+        LOG("\n-------- dt species ----------\n"
+        << "dt =  " << ms[0].get_free_path()/ms[0].get_max_velocity());
+        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+            LOG("      " << ms[i].get_free_path()/ms[0].get_max_velocity());
+        }
+
+    }
+
     template <int dim, class T>
     inline void Collisions<dim, T>::initialize()
     {
@@ -426,64 +484,6 @@ namespace PICsimulator {
         // set the new velocities
         set_velocity(it_i, v_i_new);
         set_velocity(it_j, v_j_new);
-    }
-
-        template <int dim>
-    inline void HardSphere<dim>::set_diameter(const species_type &ms)
-    {
-        // unsigned int L = ms.get_n_species();
-        unsigned int M = ms.n_combinations;
-
-        d12.reserve(M);
-
-        for(unsigned int i = 0; i<M; ++i){
-            double mr = ms.get_reduced_mass(i);
-            double d2 = 5.0/16.0 * std::sqrt(BOLTZMANN_K*mr*temp_ref/
-                (M_PI))/viscosity;
-            d12.push_back(std::sqrt(d2));
-        }
-
-        LOG("\n-------- set ref diameters ----------\n");
-        LOGVEC("d_ref", d12, M);
-
-        LOG("\n-------- diameters species ----------\n"
-         << "d_ref =  " << ms[0].get_diameter());
-        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
-            LOG("          " << ms[i].get_diameter());
-        }
-
-        LOG("\n-------- free path species ----------\n"
-        << "free path =  " << ms[0].get_free_path());
-        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
-            LOG("              " << ms[i].get_free_path());
-        }
-
-        LOG("\n-------- dt species ----------\n"
-        << "dt =  " << ms[0].get_free_path()/ms[0].get_max_velocity());
-        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
-            LOG("      " << ms[i].get_free_path()/ms[0].get_max_velocity());
-        }
-
-    }
-
-    /// compute the cross section.
-    /// @details in 2D the cross section is the diameter
-    template<>
-    inline double HardSphere<2>::compute_cross_section(
-        const unsigned int & k
-    ) const
-    {
-        return d12[k];
-    }
-
-    /// compute the cross section.
-    /// @details in 3D the cross section is the circle area of the given diameter
-    template<>
-    inline double HardSphere<3>::compute_cross_section(
-        const unsigned int & k
-    ) const
-    {
-        return M_PI * d12[k]*d12[k];
     }
 
 } // namespace PICsimulator
