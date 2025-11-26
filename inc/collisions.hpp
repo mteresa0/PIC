@@ -156,7 +156,7 @@ namespace PICsimulator {
         //// COLLISION PARAMENTERS
         
         /// species
-        species_type ms;
+        const species_type& ms;
 
         /// maximum value between the cross section and the relative velocity
         double sigma_cr_max;
@@ -251,11 +251,17 @@ namespace PICsimulator {
             double F_correction = N_coll_max/N_pair_tested;
 
             for (unsigned int ind1 = 0; ind1<ms.get_n_species(); ++ind1) {
+                if (n_pic[ind1] == 0){
+                    continue;
+                }
                 auto pic1 = particle_handlers[ind1].particles_in_cell(cell);
                 // get the begin iterator of the particles in the cell
                 const auto & pic_begin1 = pic1.begin();  
-                for (unsigned int ind2=ind1; ind2<ms.get_n_species(); ++ind2){
                 
+            for (unsigned int ind2=ind1; ind2<ms.get_n_species(); ++ind2){
+                if (n_pic[ind2] == 0){
+                    continue;
+                }
                 // combination index
                 unsigned int ind_comb = ms.combination_index(ind1, ind2);
 
