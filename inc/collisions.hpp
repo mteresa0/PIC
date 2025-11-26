@@ -122,7 +122,7 @@ namespace PICsimulator {
         /// According to this probability the particle velocities are updated based
         /// on the proveded `collision_kernel`
         void apply_collisions();
-        
+
     private:
         //// DATA MEMBERS
 
@@ -145,15 +145,28 @@ namespace PICsimulator {
 
         //// COLLISION FUNCTIONS
 
+        /// @brief computes collision probability and if U<P_coll the collision 
+        /// will be applied.
+        /// @param  it_i particle iteratior of the first species
+        /// @param  it_j particle iteratior of the second species
+        /// @param  ind_comb index of the combination pair
+        /// @param  F_correction collsion correction parameter of the cell
+        /// @return 1 if the collision is succesful, 0 if it is not.
+        unsigned int try_collision(
+            particle_iterator & , 
+            particle_iterator & ,
+            unsigned int ,
+            double);
+
         /// compute post-collisional relative velocity
         Tensor<1,dim> compute_post_collisional_velocity(const velocity_type & cr) const;
 
         /// compute and update new velocities of the particles
         void update_velocities(
-            particle_iterator & it_i, 
-            particle_iterator & it_j,
-            const velocity_type & cm,
-            const velocity_type & cr_);
+            particle_iterator & , 
+            particle_iterator & ,
+            const velocity_type & ,
+            const velocity_type & );
 
     }; // end class Collisions
 
@@ -226,6 +239,9 @@ namespace PICsimulator {
             }
             }
 
+            unsigned int N_coll_max, N_pair_tested;
+            double F_correction;
+            {
             // get the volume of the cell
             auto cell_volume = cell->measure();
 
@@ -235,8 +251,8 @@ namespace PICsimulator {
             double N_coll_max_double = 
                 0.5*N_pic_tot*(N_pic_tot-1)*weight*sigma_cr_max*dt / cell_volume;
             // double N_coll_max_double_ = 0.5*N*number_density*weight*sigma_cr_max*dt;
-            unsigned int N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
-            unsigned int N_pair_tested = static_cast<unsigned int>(std::floor(N_pic_tot/2.0));
+            N_coll_max = static_cast<unsigned int>(std::floor(N_coll_max_double+0.5));
+            N_pair_tested = static_cast<unsigned int>(std::floor(N_pic_tot/2.0));
             if (N_pair_tested > N_coll_max) {
                 N_pair_tested = N_coll_max;
             }
@@ -252,7 +268,9 @@ namespace PICsimulator {
             if (N_coll_max==0 && N_pair_tested==0){
                 continue;
             }
-            double F_correction = N_coll_max/N_pair_tested;
+            
+            F_correction = N_coll_max/N_pair_tested;
+            }
 
             for (unsigned int ind1 = 0; ind1<ms.get_n_species(); ++ind1) {
                 if (n_pic[ind1] == 0){
@@ -275,9 +293,9 @@ namespace PICsimulator {
                 // get the begin iterator of the particles in the cell
                 const auto & pic_begin2 = pic2.begin(); 
 
-                // get masses
-                const double mass1 = ms[ind1].get_mass();
-                const double mass2 = ms[ind2].get_mass();
+                // // get masses
+                // const double mass1 = ms[ind1].get_mass();
+                // const double mass2 = ms[ind2].get_mass();
 
                 unsigned int N_pair_tested_comb = 
                     std::floor(N_pair_tested*coll_comb_frac[ind_comb] + 0.5);  
@@ -300,51 +318,71 @@ namespace PICsimulator {
                     auto it_i = std::next(pic_begin1, i);
                     auto it_j = std::next(pic_begin2, j);
 
-                    // get the velocities of the two particles
-                    velocity_type v_i(get_velocity_from_properties(it_i));
-                    velocity_type v_j(get_velocity_from_properties(it_j));
-
-                    // compute the relative velocity
-                    velocity_type cr(v_i - v_j);
-                    const double cr_norm(cr.norm());
-
-                    // compute system velocity
-                    velocity_type cm((mass1*v_i + mass2*v_j) / (mass1+mass2));
-
-                    // compute cross section
-                    double sigma = collision_kernel.compute_cross_section(ind_comb);
-            
-                    // compute collision probability
-                    double P_coll = (F_correction * sigma * cr_norm )/ sigma_cr_max;
-
-                    #ifdef EXTRA_OUTPUTS
-                    out_iterations.write_row({P_coll, F_correction, 
-                        sigma*cr_norm, sigma*cr_norm/sigma_cr_max});
-                    #endif
-
-                    // pick random double [0, 1)
-                    double U = Random::rnd_uniform();
-
-                    if (U < P_coll)
-                    {
-                        // compute post collisional relative velocity
-                        velocity_type cr_post = 
-                            compute_post_collisional_velocity(cr);
-
-                        // compute and update new velocities
-                        update_velocities(it_i, it_j, cm, cr_post);
-
-                        ++k;
-
-                        if (sigma * cr_norm > sigma_cr_max)
-                        {
-                            sigma_cr_max = sigma * cr_norm;
-                        }
-                    }
+                    k += try_collision(it_i, it_j, ind_comb, F_correction);
                 }
             }}
         }
     } // end apply_collisions
+
+    template <int dim, class T>
+    inline unsigned int Collisions<dim, T>::try_collision(
+        particle_iterator & it_i, 
+        particle_iterator & it_j,
+        unsigned int ind_comb,
+        double F_correction
+    )
+    {
+        //TODO: find a better way: maybe pass ind1 and ind2? pass sigma?
+        unsigned ind1,ind2;
+        ms.species_indexes(ind_comb, ind1, ind2);
+        const double mass1(ms[ind1].get_mass());
+        const double mass2(ms[ind2].get_mass());
+
+        // get the velocities of the two particles
+        velocity_type v_i(get_velocity_from_properties(it_i));
+        velocity_type v_j(get_velocity_from_properties(it_j));
+
+        // compute the relative velocity
+        velocity_type cr(v_i - v_j);
+        const double cr_norm(cr.norm());
+
+        // compute system velocity
+        velocity_type cm((mass1*v_i + mass2*v_j) / (mass1+mass2));
+
+        // compute cross section
+        double sigma = collision_kernel.compute_cross_section(ind_comb);
+
+        // compute collision probability
+        double P_coll = (F_correction * sigma * cr_norm )/ sigma_cr_max;
+
+        #ifdef EXTRA_OUTPUTS
+        out_iterations.write_row({P_coll, F_correction, 
+            sigma*cr_norm, sigma*cr_norm/sigma_cr_max});
+        #endif
+
+        // pick random double [0, 1)
+        double U = Random::rnd_uniform();
+
+        if (U < P_coll)
+        {
+            // compute post collisional relative velocity
+            velocity_type cr_post = 
+                compute_post_collisional_velocity(cr);
+
+            // compute and update new velocities
+            update_velocities(it_i, it_j, cm, cr_post);
+
+            if (sigma * cr_norm > sigma_cr_max)
+            {
+                sigma_cr_max = sigma * cr_norm;
+            }
+
+            // if the collision is succesfull return 1;
+            return 1;
+        }
+
+        return 0;
+    } // end try_collisions
 
     template <int dim, class T>
     Tensor<1, dim> Collisions<dim, T>::compute_post_collisional_velocity(
