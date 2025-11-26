@@ -140,8 +140,8 @@ namespace PICsimulator {
                 }
             }
 
-            LOG("---------- COLLISIONS INFO ------------");
-            LOG("sigma_cr_max:    " << sigma_cr_max);
+            LOGTITLE("COLLISIONS INFO");
+            LOGVAR("sigma_cr_max", sigma_cr_max);
         }
 
     private:
@@ -269,7 +269,8 @@ namespace PICsimulator {
                 const double mass1 = ms[ind1].get_mass();
                 const double mass2 = ms[ind2].get_mass();
 
-                unsigned int N_pair_tested_comb = std::floor(N_pair_tested*coll_comb_frac[ind_comb] + 0.5);  
+                unsigned int N_pair_tested_comb = 
+                    std::floor(N_pair_tested*coll_comb_frac[ind_comb] + 0.5);  
                 
                 for (unsigned int k = 0; k<N_pair_tested_comb; )
                 {
@@ -306,20 +307,22 @@ namespace PICsimulator {
                     // compute collision probability
                     double P_coll = (F_correction * sigma * cr_norm )/ sigma_cr_max;
 
+                    #ifdef EXTRA_OUTPUTS
+                    out_iterations.write_row({P_coll, F_correction, 
+                        sigma*cr_norm, sigma*cr_norm/sigma_cr_max});
+                    #endif
+
                     // pick random double [0, 1)
                     double U = Random::rnd_uniform();
-
-                    #ifdef EXTRA_OUTPUTS
-                    out_iterations.write_row({P_coll, F_correction, sigma*cr_norm, sigma*cr_norm/sigma_cr_max});
-                    #endif
 
                     if (U < P_coll)
                     {
                         // compute post collisional relative velocity
-                        velocity_type cr_ = compute_post_collisional_velocity(cr);
+                        velocity_type cr_post = 
+                            compute_post_collisional_velocity(cr);
 
                         // compute and update new velocities
-                        update_velocities(it_i, it_j, cm, cr_);
+                        update_velocities(it_i, it_j, cm, cr_post);
 
                         ++k;
 
@@ -334,7 +337,8 @@ namespace PICsimulator {
     } // end apply_collisions
 
     template <int dim, class T>
-    Tensor<1, dim> Collisions<dim, T>::compute_post_collisional_velocity(const velocity_type & cr) const
+    Tensor<1, dim> Collisions<dim, T>::compute_post_collisional_velocity(
+        const velocity_type & cr) const
     {
         // initialize post-collisional relative velocity
         velocity_type cr_;
@@ -391,11 +395,8 @@ namespace PICsimulator {
             d12.push_back(std::sqrt(d2));
         }
 
-        LOG("\n-------- set ref diameters ----------\n"
-         << "d_ref =  " << d12[0]);
-        for (unsigned int i = 1; i<M; ++i){
-            LOG("          " << d12[i]);
-        }
+        LOG("\n-------- set ref diameters ----------\n");
+        LOGVEC("d_ref", d12, M);
 
         LOG("\n-------- diameters species ----------\n"
          << "d_ref =  " << ms[0].get_diameter());

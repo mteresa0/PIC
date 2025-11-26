@@ -273,10 +273,6 @@ namespace PICsimulator::Species {
         unsigned int l1 = n_species;
 
         for (i = 0 ; i<n_species; ++i){
-            // std::cout << "\ni = " << i;
-            // std::cout << "\nj = " << j;
-            // std::cout << "\nl1= " << l1;
-            // std::cout << "\nk1= " << k1 << "\n";
             
             if(k1>=l1){
                 k1 -=l1;
@@ -302,8 +298,6 @@ namespace PICsimulator::Species {
 
     private:  
         std::vector<double> reduced_mass;
-
-
 
     };
     // TODO: add printing info method
