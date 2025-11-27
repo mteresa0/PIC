@@ -17,12 +17,18 @@
 
 #include "utilities.hpp"
 #include <algorithm>
+#include <fstream>
+#include <stdexcept>
+
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 
 namespace PICsimulator::Species {
 
     /// @brief base class to species
     class ChemicalSpecies {
-    protected: 
+    public: 
+
         /// @brief ChemicalSpecies constructor
         /// @param `c_name` name specie
         /// @param `c_real_mass` mass in (kg) of one particle
@@ -38,7 +44,10 @@ namespace PICsimulator::Species {
                     const double & c_diameter,
                     const double & c_temperature,
                     const unsigned int & c_weight);
-    public:
+
+        ChemicalSpecies(const std::string& species_file,
+                        std::string& name);
+    
         /// @brief ChemicalSpecies destructor 
         ~ChemicalSpecies() = default;
 
@@ -90,55 +99,17 @@ namespace PICsimulator::Species {
         }
 
     private:
-        const std::string name;
-        const double real_mass; // kg
-        const double charge; // C
-        const double diameter; // m
-        const double temperature; // K
+        std::string name;
+        double real_mass; // kg
+        double charge; // C
+        double diameter; // m
+        double temperature; // K
         // const double pressure; // Pa
-        const unsigned int weight;
-        const double computed_mass; // kg
+        unsigned int weight;
+        double computed_mass; // kg
         /// @brief scale parameter of the Boltzmann-Maxwell distribution
         /// @details usually denoted as 'a'
-        const double scale_parameter;
-    };
-
-    // TODO: move this in a json file
-    class N2 : public ChemicalSpecies {
-    public:
-        N2() : ChemicalSpecies(
-            /*name*/ "N2",
-            /*real mass*/ 4.26e-26, /*kg*/
-            /*charge*/ 0.0,
-            /*diameter*/ 3.64e-10,
-            /*temperature*/ 300.0,
-            // /*pressure*/ 1.0e5,
-            /*weight*/ 30) {};
-        
-        ~N2() = default;
-        N2(const N2 &) = default;
-        N2(N2 &&) = delete;
-        N2 & operator=(const N2 &) = delete;
-        N2 & operator=(N2 &&) = delete;
-
-    };
-
-    class O2 : public ChemicalSpecies {
-    public:
-        O2() : ChemicalSpecies(
-            /*name*/ "O2",
-            /*real mass*/ 5.31339290530668e-26, /*kg*/
-            /*charge*/ 0.0, /*C*/
-            /*diameter*/ 3.46e-10, /*m*/
-            /*temperature*/ 300.0, /*K*/
-            // /*pressure*/ 1.0e5, /*Pa*/
-            /*weight*/ 30) {};
-        
-        ~O2() = default;
-        O2(const O2 &) = default;
-        O2(O2 &&) = delete;
-        O2 & operator=(const O2 &) = delete;
-        O2 & operator=(O2 &&) = delete;
+        double scale_parameter;
     };
 
     // TODO: add constructor from json file
@@ -156,8 +127,8 @@ namespace PICsimulator::Species {
             const double & temp_,
             const double & p_tot_);
             
-        /// @brief default constructor
-        MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
+        // /// @brief default constructor
+        // MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
 
         //// indexes functions
         /// @brief compute the combination index of two species
@@ -262,7 +233,38 @@ namespace PICsimulator::Species {
             weight(c_weight),
             computed_mass(c_weight*c_real_mass),
             scale_parameter(BOLTZMANN_K*temperature/ real_mass) 
-            {};
+            {}
+
+    inline ChemicalSpecies::ChemicalSpecies(
+        const std::string & species_file, std::string & species_name)
+    {
+        // Load species.json
+        std::ifstream fs(species_file);
+        if (!fs)
+            throw std::runtime_error("Cannot open species file: " + species_file);
+
+        json data = json::parse(fs);
+
+        // Search the species by name
+        bool found(false);
+        for (auto& s : data["species"]) {
+            if (s["name"] == species_name) {
+                found = true;
+                name = std::move(species_name);
+                real_mass = s["real_mass"];
+                charge = s["charge"];
+                diameter = s["diameter"];
+                temperature = s["temperature"];
+                weight = s["weight"];
+                computed_mass = weight*real_mass;
+                scale_parameter = BOLTZMANN_K*temperature/ real_mass;
+            };
+        }
+
+        if(not(found)){
+            throw std::runtime_error("Cannot find species " + species_name);
+        }
+    };
 
     MultiSpecies::MultiSpecies(
         const std::vector<ChemicalSpecies> & sp_vec_,
@@ -316,7 +318,8 @@ namespace PICsimulator::Species {
         return k;
     };
 
-    inline void MultiSpecies::species_indexes(const unsigned int & k, unsigned int & i, unsigned int & j) const
+    inline void MultiSpecies::species_indexes(
+        const unsigned int & k, unsigned int & i, unsigned int & j) const
     {
         unsigned int k1 = k;
         unsigned int l1 = n_species_;

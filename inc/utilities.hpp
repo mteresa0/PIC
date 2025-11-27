@@ -19,6 +19,7 @@
 #include <chrono>
 #include <iomanip> 
 #include <random>
+#include <fstream>
 
 // LOGGING OPTION for printing simulation info
 #if LOG_ENABLED

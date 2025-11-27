@@ -1,6 +1,7 @@
-#include "simulator.hpp"
-#include "domain.hpp"
-#include "utilities.hpp"
+// #include "simulator.hpp"
+// #include "domain.hpp"
+// #include "utilities.hpp"
+#include "species.hpp"
 
 #include "test_simulators.hpp"
 #include "deal.II/base/tensor.h"
@@ -19,19 +20,23 @@ int main() {
     // PICsimulator::TestSimulators::convergence_test<dim>(
     //     motion, dts, total_time);
 
-    Point<dim> lower_vertex(0, 0);
-    Point<dim> upper_vertex(5e-7, 5e-7);
-    Domain::PeriodicDomain<dim> domain_data(lower_vertex, upper_vertex);
+    std::string n2str = "O2";
 
-    std::vector<Species::ChemicalSpecies> species({Species::N2(), Species::O2()});
+    Species::ChemicalSpecies("data/species.json", n2str);
 
-    Species::MultiSpecies ms(species, {100, 100});
+    // Point<dim> lower_vertex(0, 0);
+    // Point<dim> upper_vertex(5e-7, 5e-7);
+    // Domain::PeriodicDomain<dim> domain_data(lower_vertex, upper_vertex);
 
-    double dt = 1e-13;
+    // std::vector<Species::ChemicalSpecies> species({Species::N2(), Species::O2()});
 
-    PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
+    // Species::MultiSpecies ms(species, {100, 100});
 
-    simulator.run();
+    // double dt = 1e-13;
+
+    // PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
+
+    // simulator.run();
     
     
 }

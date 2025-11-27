@@ -1,0 +1,20 @@
+{
+    "species": [
+        {
+            "name" : "N2",
+            "real_mass" : 4.26e-26,
+            "charge" : 0.0,
+            "diameter" : 3.64e-10,
+            "temperature" : 300.0,
+            "weight" : 30
+        },
+        {
+            "name" : "O2",
+            "real_mass" : 5.31e-26,
+            "charge" : 0.0,
+            "diameter" : 3.46e-10,
+            "temperature" : 300.0,
+            "weight" : 30
+        }
+    ]
+}
