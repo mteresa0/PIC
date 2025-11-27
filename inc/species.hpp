@@ -37,19 +37,7 @@ namespace PICsimulator::Species {
                     const double & c_charge,
                     const double & c_diameter,
                     const double & c_temperature,
-                    const double & c_pressure,
-                    const unsigned int & c_weight):
-                name(c_name),
-                real_mass(c_real_mass), 
-                charge(c_charge),
-                diameter(c_diameter),
-                temperature(c_temperature),
-                pressure(c_pressure),
-                weight(c_weight),
-                computed_mass(c_weight*c_real_mass),
-                scale_parameter(BOLTZMANN_K*temperature/ real_mass) 
-                {};
-
+                    const unsigned int & c_weight);
     public:
         /// @brief ChemicalSpecies destructor 
         ~ChemicalSpecies() = default;
@@ -86,8 +74,10 @@ namespace PICsimulator::Species {
         
         /// @brief get free path length
         double get_free_path() const {
-            return (BOLTZMANN_K * temperature) / (std::sqrt(2) * M_PI * 
-            diameter * diameter * pressure);
+            return 1;
+            // TODO: fix get_free_path (no more pressure in chemicalspecies)
+            // return (BOLTZMANN_K * temperature) / (std::sqrt(2) * M_PI * 
+            // diameter * diameter * pressure);
         }
 
         /// @brief get specie name
@@ -105,7 +95,7 @@ namespace PICsimulator::Species {
         const double charge; // C
         const double diameter; // m
         const double temperature; // K
-        const double pressure; // Pa
+        // const double pressure; // Pa
         const unsigned int weight;
         const double computed_mass; // kg
         /// @brief scale parameter of the Boltzmann-Maxwell distribution
@@ -122,7 +112,7 @@ namespace PICsimulator::Species {
             /*charge*/ 0.0,
             /*diameter*/ 3.64e-10,
             /*temperature*/ 300.0,
-            /*pressure*/ 1.0e5,
+            // /*pressure*/ 1.0e5,
             /*weight*/ 30) {};
         
         ~N2() = default;
@@ -141,7 +131,7 @@ namespace PICsimulator::Species {
             /*charge*/ 0.0, /*C*/
             /*diameter*/ 3.46e-10, /*m*/
             /*temperature*/ 300.0, /*K*/
-            /*pressure*/ 1.0e5, /*Pa*/
+            // /*pressure*/ 1.0e5, /*Pa*/
             /*weight*/ 30) {};
         
         ~O2() = default;
@@ -161,35 +151,8 @@ namespace PICsimulator::Species {
         /// specie
         MultiSpecies(
             const std::vector<ChemicalSpecies> & sp_vec_,
-            const std::vector<unsigned int> n_particles_
-        ):  species_vec(sp_vec_),
-            n_particles(n_particles_),
-            n_species(species_vec.size()),
-            n_combinations(int(0.5*n_species*(n_species+1))),
-            reduced_mass(n_combinations)
-        {
-            if (n_species!=n_particles.size()){
-                std::string error_msg = 
-                    "Invalid argument: The 'species' vector size (" +
-                    std::to_string(n_species) + 
-                    ") must match the 'n_particle' vector size (" + 
-                    std::to_string(n_particles.size()) + ").";
-                                            
-                    throw std::invalid_argument(error_msg);
-            }
-
-            // initialize reduced_mass vector
-            unsigned int k = 0;
-            for (unsigned int i = 0; i<n_species; ++i) {
-                double m_i(species_vec[i].get_mass());
-                for (unsigned int j = i; j<n_species; ++j){
-                    double m_j(species_vec[j].get_mass());
-                    reduced_mass[k] = m_i*m_j/(m_i+m_j);
-                    ++k;
-                }
-            }
-        };
-
+            const std::vector<unsigned int> n_particles_);
+            
     /// @brief default constructor
     MultiSpecies() : MultiSpecies({N2()}, {1000}) {};
 
@@ -234,29 +197,13 @@ namespace PICsimulator::Species {
         return reduced_mass[i];
     };
 
-
     //// indexes functions
     /// @brief compute the combination index of two species
     /// @param i index of the first species
     /// @param j index of the second species
     /// @details the combined index is computed such that `i` is always greater 
     /// or equal to `j`
-    unsigned int combination_index(
-        unsigned int i, 
-        unsigned int j) const
-    {
-        if(i>j) {
-            std::swap(i, j);
-        }
-
-        unsigned int k = j;
-        for (unsigned int ii = 0; ii<i; ++ii)
-        {
-            k += n_species-1-ii;
-        }
-
-        return k;
-    };
+    unsigned int combination_index(unsigned int , unsigned int ) const;
 
     /// @brief compute the indexes of the species given the combination index
     /// @param k combination index of species `i` and `j`
@@ -265,25 +212,7 @@ namespace PICsimulator::Species {
     /// @details the combined index is computed such that `i` is always greater 
     /// or equal to `j`
     void species_indexes(
-        const unsigned int & k,
-        unsigned int & i,
-        unsigned int & j) const 
-    {
-        unsigned int k1 = k;
-        unsigned int l1 = n_species;
-
-        for (i = 0 ; i<n_species; ++i){
-            
-            if(k1>=l1){
-                k1 -=l1;
-                l1 -=1;
-            } else  {
-                j = k1 +i;
-                break;
-            }
-        }
-        return;
-    };
+        const unsigned int & k, unsigned int & i, unsigned int & j) const;
 
     private:
         /// @brief vector of species
@@ -301,6 +230,89 @@ namespace PICsimulator::Species {
 
     };
     // TODO: add printing info method
+
+    ChemicalSpecies::ChemicalSpecies(
+        const std::string& c_name,
+        const double & c_real_mass,
+        const double & c_charge,
+        const double & c_diameter,
+        const double & c_temperature,
+        const unsigned int & c_weight):
+            name(c_name),
+            real_mass(c_real_mass), 
+            charge(c_charge),
+            diameter(c_diameter),
+            temperature(c_temperature),
+            weight(c_weight),
+            computed_mass(c_weight*c_real_mass),
+            scale_parameter(BOLTZMANN_K*temperature/ real_mass) 
+            {};
+
+    MultiSpecies::MultiSpecies(
+        const std::vector<ChemicalSpecies> & sp_vec_,
+        const std::vector<unsigned int> n_particles_):
+            species_vec(sp_vec_),
+            n_particles(n_particles_),n_species(species_vec.size()),
+            n_combinations(int(0.5*n_species*(n_species+1))),
+            reduced_mass(n_combinations)
+    {
+        if (n_species!=n_particles.size()){
+            std::string error_msg = 
+                "Invalid argument: The 'species' vector size (" +
+                std::to_string(n_species) + 
+                ") must match the 'n_particle' vector size (" + 
+                std::to_string(n_particles.size()) + ").";
+                                        
+                throw std::invalid_argument(error_msg);
+        }
+
+        // initialize reduced_mass vector
+        unsigned int k = 0;
+        for (unsigned int i = 0; i<n_species; ++i) {
+            double m_i(species_vec[i].get_mass());
+            for (unsigned int j = i; j<n_species; ++j){
+                double m_j(species_vec[j].get_mass());
+                reduced_mass[k] = m_i*m_j/(m_i+m_j);
+                ++k;
+            }
+        }
+    }
+
+    inline unsigned int MultiSpecies::combination_index(
+        unsigned int i,
+        unsigned int j) const
+    {
+        if(i>j) {
+            std::swap(i, j);
+        }
+
+        unsigned int k = j;
+        for (unsigned int ii = 0; ii<i; ++ii)
+        {
+            k += n_species-1-ii;
+        }
+
+        return k;
+    };
+
+    inline void MultiSpecies::species_indexes(const unsigned int & k, unsigned int & i, unsigned int & j) const
+    {
+        unsigned int k1 = k;
+        unsigned int l1 = n_species;
+
+        for (i = 0 ; i<n_species; ++i){
+            
+            if(k1>=l1){
+                k1 -=l1;
+                l1 -=1;
+            } else  {
+                j = k1 +i;
+                break;
+            }
+        }
+        return;
+    };
+
 }
 
 
