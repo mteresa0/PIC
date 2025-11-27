@@ -193,13 +193,13 @@ namespace PICsimulator {
     template <int dim>
     inline void HardSphere<dim>::set_diameter(const species_type &ms)
     {
-        // unsigned int L = ms.get_n_species();
-        unsigned int M = ms.n_combinations;
+        // unsigned int L = ms.n_species();
+        unsigned int M = ms.n_combinations();
 
         d12.reserve(M);
 
         for(unsigned int i = 0; i<M; ++i){
-            double mr = ms.get_reduced_mass(i);
+            double mr = ms.reduced_mass(i);
             double d2 = 5.0/16.0 * std::sqrt(BOLTZMANN_K*mr*temp_ref/
                 (M_PI))/viscosity;
             d12.push_back(std::sqrt(d2));
@@ -210,19 +210,19 @@ namespace PICsimulator {
 
         LOG("\n-------- diameters species ----------\n"
          << "d_ref =  " << ms[0].get_diameter());
-        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+        for (unsigned int i = 1; i<ms.n_species(); ++i){
             LOG("          " << ms[i].get_diameter());
         }
 
         LOG("\n-------- free path species ----------\n"
         << "free path =  " << ms[0].get_free_path());
-        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+        for (unsigned int i = 1; i<ms.n_species(); ++i){
             LOG("              " << ms[i].get_free_path());
         }
 
         LOG("\n-------- dt species ----------\n"
         << "dt =  " << ms[0].get_free_path()/ms[0].get_max_velocity());
-        for (unsigned int i = 1; i<ms.get_n_species(); ++i){
+        for (unsigned int i = 1; i<ms.n_species(); ++i){
             LOG("      " << ms[i].get_free_path()/ms[0].get_max_velocity());
         }
 
@@ -238,9 +238,9 @@ namespace PICsimulator {
                         ms[0].get_max_velocity();
 
         unsigned int k = 0;
-        for(unsigned int i = 0; i<ms.get_n_species(); ++i){
+        for(unsigned int i = 0; i<ms.n_species(); ++i){
             double max_v_i = ms[i].get_max_velocity();
-            for (unsigned int j = i; j<ms.get_n_species(); ++j){
+            for (unsigned int j = i; j<ms.n_species(); ++j){
                 double max_v = std::max(max_v_i, ms[j].get_max_velocity());
                 sigma_cr_max = std::max(sigma_cr_max, 
                     max_v*2*collision_kernel.compute_cross_section(k)
@@ -268,9 +268,9 @@ namespace PICsimulator {
         {
             // compute n particles in cell for each species and the total number
             // of particles in cell 
-            std::vector<particle_index> n_pic(ms.get_n_species());
+            std::vector<particle_index> n_pic(ms.n_species());
             particle_index N_pic_tot = 0;            
-            for( unsigned int i = 0; i<ms.get_n_species(); ++i){
+            for( unsigned int i = 0; i<ms.n_species(); ++i){
                 n_pic[i] = particle_handlers[i].n_particles_in_cell(cell);
                 N_pic_tot += n_pic[i];
             }
@@ -281,15 +281,15 @@ namespace PICsimulator {
             }
 
             // compute fractions of collision for each combination
-            std::vector<double> coll_comb_frac(ms.n_combinations);
+            std::vector<double> coll_comb_frac(ms.n_combinations());
             {
             unsigned int k = 0;
             double total_collisions = (0.5*N_pic_tot*(N_pic_tot-1));
-            for (unsigned int i = 0; i<ms.get_n_species(); ++i) {
+            for (unsigned int i = 0; i<ms.n_species(); ++i) {
                 coll_comb_frac[k] = 
                     ((0.5*n_pic[i]*(n_pic[i]-1))/total_collisions);
                     ++k;
-                for (unsigned int j = i+1; j<ms.get_n_species(); ++j){
+                for (unsigned int j = i+1; j<ms.n_species(); ++j){
                     coll_comb_frac[k] = 
                         ((n_pic[i]*n_pic[j])/total_collisions);
                     ++k;
@@ -330,7 +330,7 @@ namespace PICsimulator {
             F_correction = N_coll_max/N_pair_tested;
             }
 
-            for (unsigned int ind1 = 0; ind1<ms.get_n_species(); ++ind1) {
+            for (unsigned int ind1 = 0; ind1<ms.n_species(); ++ind1) {
                 if (n_pic[ind1] == 0){
                     continue;
                 }
@@ -338,7 +338,7 @@ namespace PICsimulator {
                 // get the begin iterator of the particles in the cell
                 const auto & pic_begin1 = pic1.begin();  
                 
-            for (unsigned int ind2=ind1; ind2<ms.get_n_species(); ++ind2){
+            for (unsigned int ind2=ind1; ind2<ms.n_species(); ++ind2){
                 if (n_pic[ind2] == 0){
                     continue;
                 }

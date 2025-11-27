@@ -27,9 +27,9 @@ int main() {
 
     Species::MultiSpecies ms(species, {100, 100});
 
-    double dt = 1e-12;
+    double dt = 1e-13;
 
-    PICsimulator::Simulator<dim> simulator(dt, 100*dt, ms, domain_data);
+    PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
 
     simulator.run();
     

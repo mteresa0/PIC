@@ -147,94 +147,103 @@ namespace PICsimulator::Species {
     public:
         /// @brief constructor
         /// @param sp_vec_ vector of species
-        /// @param n_particles_ number of particles of each species
+        /// @param vec_n_part_ number of particles of each species
         /// @param temp_ neutral temperature (K)
         /// @param p_tot_ total pressure (Pa)
         MultiSpecies(
             const std::vector<ChemicalSpecies> & sp_vec_,
-            const std::vector<unsigned int> n_particles_,
+            const std::vector<unsigned int> vec_n_part_,
             const double & temp_,
             const double & p_tot_);
             
-    /// @brief default constructor
-    MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
+        /// @brief default constructor
+        MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
 
-    /// @brief provides read-only array-like access to a specie
-    /// @param i specie index
-    const ChemicalSpecies& operator[](const unsigned int i) const {
-        if (i >= species_vec.size()) { 
-            throw std::out_of_range("Index out of bounds for species_vec");
-        }
-        return species_vec[i];
-    }
-    
-    /// @brief get the number of particles of the i-specie
-    /// @param i 
-    unsigned int get_n_particles(const unsigned int i ) const {  
-        if (i >= n_particles.size()) { 
-            throw std::out_of_range("Index out of bounds for n_particles");
-        }
-        return n_particles[i];
-    };
+        //// indexes functions
+        /// @brief compute the combination index of two species
+        /// @param i index of the first species
+        /// @param j index of the second species
+        /// @details the combined index is computed such that `i` is always greater 
+        /// or equal to `j`
+        unsigned int combination_index(unsigned int , unsigned int ) const;
 
-    /// @brief get the number of species in this gas mixture
-    /// @return 
-    unsigned int get_n_species() const {return n_species;};
-
-    /// @brief get the i-specie
-    /// @param i
-    const ChemicalSpecies& get_specie(const unsigned int i ) const {
-        if (i >= species_vec.size()) { 
-            throw std::out_of_range("Index out of bounds for species_vec");
-        }
-        return species_vec[i];
-    }
-
-    /// @brief get the species vector
-    /// @return reference of the species vector
-    const std::vector<ChemicalSpecies>& get_species_vector() const {
-        return species_vec;
-    };
-
-    const double & get_reduced_mass(const unsigned int & i) const {
-        return reduced_mass[i];
-    };
-
-    //// indexes functions
-    /// @brief compute the combination index of two species
-    /// @param i index of the first species
-    /// @param j index of the second species
-    /// @details the combined index is computed such that `i` is always greater 
-    /// or equal to `j`
-    unsigned int combination_index(unsigned int , unsigned int ) const;
-
-    /// @brief compute the indexes of the species given the combination index
-    /// @param k combination index of species `i` and `j`
-    /// @param i index of the first species
-    /// @param j index of the second species
-    /// @details the combined index is computed such that `i` is always greater 
-    /// or equal to `j`
-    void species_indexes(
-        const unsigned int & k, unsigned int & i, unsigned int & j) const;
+        /// @brief compute the indexes of the species given the combination index
+        /// @param k combination index of species `i` and `j`
+        /// @param i index of the first species
+        /// @param j index of the second species
+        /// @details the combined index is computed such that `i` is always greater 
+        /// or equal to `j`
+        void species_indexes(
+            const unsigned int & k, unsigned int & i, unsigned int & j) const;
 
     private:
         /// @brief vector of species
-        const std::vector<ChemicalSpecies> species_vec;
+        const std::vector<ChemicalSpecies> species_vec_;
         /// @brief vecotr of particles numbers (corresponding to each specie)
-        const std::vector<unsigned int> n_particles;
+        const std::vector<unsigned int> n_particles_;
         /// @brief number of species
-        const unsigned int n_species;    
+        const unsigned int n_species_;    
+
+        const unsigned int n_combinations_;  
+
+        std::vector<double> reduced_mass_;
+        /// neutrals temperature
+        const double temperature_;
+        /// total pressure
+        const double p_total_;
 
     public:
-        const unsigned int n_combinations;  
 
-    private:  
-        std::vector<double> reduced_mass;
-        /// neutrals temperature
-        const double temperature;
-        /// total pressure
-        const double p_total;
+        ////// getters //////
 
+        /// @brief provides read-only array-like access to a specie
+        /// @param i specie index
+        const ChemicalSpecies& operator[](const unsigned int i) const {
+            if (i >= species_vec_.size()) { 
+                throw std::out_of_range("Index out of bounds for species_vec_");
+            }
+            return species_vec_[i];
+        }
+        
+        /// @brief get the number of particles of the i-specie
+        /// @param i 
+        unsigned int n_particles(const unsigned int i ) const {  
+            if (i >= n_particles_.size()) { 
+                throw std::out_of_range("Index out of bounds for n_particles_");
+            }
+            return n_particles_[i];
+        };
+
+        /// @brief get the number of species in this gas mixture
+        /// @return 
+        unsigned int n_species() const {return n_species_;};
+
+        /// @brief get the i-specie
+        /// @param i
+        const ChemicalSpecies& get_chem_species(const unsigned int i ) const {
+            if (i >= species_vec_.size()) { 
+                throw std::out_of_range("Index out of bounds for species_vec_");
+            }
+            return species_vec_[i];
+        }
+
+        /// @brief get the species vector
+        /// @return reference of the species vector
+        const std::vector<ChemicalSpecies>& species_vec() const {
+            return species_vec_;
+        };
+
+        /// @brief get reduced mass of the i-combination
+        const double & reduced_mass(const unsigned int & i) const {
+            if (i >= n_combinations_) { 
+                throw std::out_of_range(
+                "Index out of bounds: i >= number of collisions combinations");
+            }
+            return reduced_mass_[i];
+        };
+
+        /// @brief get number of combinations
+        const unsigned int & n_combinations() const {return n_combinations_;}
     };
     // TODO: add printing info method
 
@@ -257,33 +266,34 @@ namespace PICsimulator::Species {
 
     MultiSpecies::MultiSpecies(
         const std::vector<ChemicalSpecies> & sp_vec_,
-        const std::vector<unsigned int> n_particles_,
+        const std::vector<unsigned int> vec_n_part_,
         const double & temp_=300.0,
         const double & p_tot_=1e5):
-            species_vec(sp_vec_),
-            n_particles(n_particles_),n_species(species_vec.size()),
-            n_combinations(int(0.5*n_species*(n_species+1))),
-            reduced_mass(n_combinations),
-            temperature(temp_),
-            p_total(p_tot_)
+            species_vec_(sp_vec_),
+            n_particles_(vec_n_part_),
+            n_species_(species_vec_.size()),
+            n_combinations_(int(0.5*n_species_*(n_species_+1))),
+            reduced_mass_(n_combinations_),
+            temperature_(temp_),
+            p_total_(p_tot_)
     {
-        if (n_species!=n_particles.size()){
+        if (n_species_!=n_particles_.size()){
             std::string error_msg = 
                 "Invalid argument: The 'species' vector size (" +
-                std::to_string(n_species) + 
+                std::to_string(n_species_) + 
                 ") must match the 'n_particle' vector size (" + 
-                std::to_string(n_particles.size()) + ").";
+                std::to_string(n_particles_.size()) + ").";
                                         
                 throw std::invalid_argument(error_msg);
         }
 
-        // initialize reduced_mass vector
+        // initialize reduced_mass_ vector
         unsigned int k = 0;
-        for (unsigned int i = 0; i<n_species; ++i) {
-            double m_i(species_vec[i].get_mass());
-            for (unsigned int j = i; j<n_species; ++j){
-                double m_j(species_vec[j].get_mass());
-                reduced_mass[k] = m_i*m_j/(m_i+m_j);
+        for (unsigned int i = 0; i<n_species_; ++i) {
+            double m_i(species_vec_[i].get_mass());
+            for (unsigned int j = i; j<n_species_; ++j){
+                double m_j(species_vec_[j].get_mass());
+                reduced_mass_[k] = m_i*m_j/(m_i+m_j);
                 ++k;
             }
         }
@@ -300,7 +310,7 @@ namespace PICsimulator::Species {
         unsigned int k = j;
         for (unsigned int ii = 0; ii<i; ++ii)
         {
-            k += n_species-1-ii;
+            k += n_species_-1-ii;
         }
 
         return k;
@@ -309,9 +319,9 @@ namespace PICsimulator::Species {
     inline void MultiSpecies::species_indexes(const unsigned int & k, unsigned int & i, unsigned int & j) const
     {
         unsigned int k1 = k;
-        unsigned int l1 = n_species;
+        unsigned int l1 = n_species_;
 
-        for (i = 0 ; i<n_species; ++i){
+        for (i = 0 ; i<n_species_; ++i){
             
             if(k1>=l1){
                 k1 -=l1;

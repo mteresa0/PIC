@@ -19,7 +19,7 @@ PICsimulator::Simulator<dim>::Simulator(
 dt(dt_),
 T(T_),
 species(std::move(species_)),
-n_species(species.get_n_species()),
+n_species(species.n_species()),
 mapping(1), 
 dof_handler(triangulation),
 particle_handlers(n_species),
@@ -141,7 +141,7 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
 
     for (unsigned int i = 0; i<n_species; ++i) {
         // generate random position for each particle. store positions in a vector
-        std::vector<Point<dim>> positions(species.get_n_particles(i));    
+        std::vector<Point<dim>> positions(species.n_particles(i));    
         for(auto & position : positions){
             for(int n = 0; n<dim; ++n){
                 position[n] = Random::rnd_uniform(lower_vertex[n], upper_vertex[n]);
