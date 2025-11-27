@@ -147,14 +147,17 @@ namespace PICsimulator::Species {
     public:
         /// @brief constructor
         /// @param sp_vec_ vector of species
-        /// @param n_particles_ vector of particles number corresponding to each 
-        /// specie
+        /// @param n_particles_ number of particles of each species
+        /// @param temp_ neutral temperature (K)
+        /// @param p_tot_ total pressure (Pa)
         MultiSpecies(
             const std::vector<ChemicalSpecies> & sp_vec_,
-            const std::vector<unsigned int> n_particles_);
+            const std::vector<unsigned int> n_particles_,
+            const double & temp_,
+            const double & p_tot_);
             
     /// @brief default constructor
-    MultiSpecies() : MultiSpecies({N2()}, {1000}) {};
+    MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
 
     /// @brief provides read-only array-like access to a specie
     /// @param i specie index
@@ -227,6 +230,10 @@ namespace PICsimulator::Species {
 
     private:  
         std::vector<double> reduced_mass;
+        /// neutrals temperature
+        const double temperature;
+        /// total pressure
+        const double p_total;
 
     };
     // TODO: add printing info method
@@ -250,11 +257,15 @@ namespace PICsimulator::Species {
 
     MultiSpecies::MultiSpecies(
         const std::vector<ChemicalSpecies> & sp_vec_,
-        const std::vector<unsigned int> n_particles_):
+        const std::vector<unsigned int> n_particles_,
+        const double & temp_=300.0,
+        const double & p_tot_=1e5):
             species_vec(sp_vec_),
             n_particles(n_particles_),n_species(species_vec.size()),
             n_combinations(int(0.5*n_species*(n_species+1))),
-            reduced_mass(n_combinations)
+            reduced_mass(n_combinations),
+            temperature(temp_),
+            p_total(p_tot_)
     {
         if (n_species!=n_particles.size()){
             std::string error_msg = 

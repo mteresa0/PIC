@@ -27,7 +27,7 @@ int main() {
 
     Species::MultiSpecies ms(species, {100, 100});
 
-    double dt = species[0].get_free_path() / species[0].get_mean_velocity();
+    double dt = 1e-12;
 
     PICsimulator::Simulator<dim> simulator(dt, 100*dt, ms, domain_data);
 
