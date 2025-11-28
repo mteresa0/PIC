@@ -20,10 +20,9 @@ int main() {
     // PICsimulator::TestSimulators::convergence_test<dim>(
     //     motion, dts, total_time);
 
-    std::string n2str = "O2";
+    Species::MultiSpecies ms("data/multispecies.json") ;
 
-    Species::ChemicalSpecies("data/species.json", n2str);
-
+    ms.print();
     // Point<dim> lower_vertex(0, 0);
     // Point<dim> upper_vertex(5e-7, 5e-7);
     // Domain::PeriodicDomain<dim> domain_data(lower_vertex, upper_vertex);

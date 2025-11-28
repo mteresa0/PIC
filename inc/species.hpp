@@ -46,7 +46,7 @@ namespace PICsimulator::Species {
                     const unsigned int & c_weight);
 
         ChemicalSpecies(const std::string& species_file,
-                        std::string& name);
+                        const std::string& name);
     
         /// @brief ChemicalSpecies destructor 
         ~ChemicalSpecies() = default;
@@ -98,6 +98,8 @@ namespace PICsimulator::Species {
             return get_mean_velocity() + 3*get_std();
         }
 
+        void print() const;
+
     private:
         std::string name;
         double real_mass; // kg
@@ -126,6 +128,8 @@ namespace PICsimulator::Species {
             const std::vector<unsigned int> vec_n_part_,
             const double & temp_,
             const double & p_tot_);
+
+        MultiSpecies(const std::string & ms_filename);
             
         // /// @brief default constructor
         // MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
@@ -149,19 +153,19 @@ namespace PICsimulator::Species {
 
     private:
         /// @brief vector of species
-        const std::vector<ChemicalSpecies> species_vec_;
+        std::vector<ChemicalSpecies> species_vec_;
         /// @brief vecotr of particles numbers (corresponding to each specie)
-        const std::vector<unsigned int> n_particles_;
+        std::vector<unsigned int> n_particles_;
         /// @brief number of species
-        const unsigned int n_species_;    
+        unsigned int n_species_;    
 
-        const unsigned int n_combinations_;  
+        unsigned int n_combinations_;  
 
         std::vector<double> reduced_mass_;
         /// neutrals temperature
-        const double temperature_;
+        double temperature_;
         /// total pressure
-        const double p_total_;
+        double p_total_;
 
     public:
 
@@ -215,10 +219,13 @@ namespace PICsimulator::Species {
 
         /// @brief get number of combinations
         const unsigned int & n_combinations() const {return n_combinations_;}
+
+        /// 
+        void print() const;
     };
     // TODO: add printing info method
 
-    ChemicalSpecies::ChemicalSpecies(
+    inline ChemicalSpecies::ChemicalSpecies(
         const std::string& c_name,
         const double & c_real_mass,
         const double & c_charge,
@@ -236,7 +243,7 @@ namespace PICsimulator::Species {
             {}
 
     inline ChemicalSpecies::ChemicalSpecies(
-        const std::string & species_file, std::string & species_name)
+        const std::string & species_file, const std::string & species_name)
     {
         // Load species.json
         std::ifstream fs(species_file);
@@ -250,7 +257,7 @@ namespace PICsimulator::Species {
         for (auto& s : data["species"]) {
             if (s["name"] == species_name) {
                 found = true;
-                name = std::move(species_name);
+                name = species_name;
                 real_mass = s["real_mass"];
                 charge = s["charge"];
                 diameter = s["diameter"];
@@ -264,9 +271,19 @@ namespace PICsimulator::Species {
         if(not(found)){
             throw std::runtime_error("Cannot find species " + species_name);
         }
+    }
+
+    inline void ChemicalSpecies::print() const {
+        LOGVAR("Name", name);
+        LOGVAR("Real mass [kg]", real_mass);
+        LOGVAR("Charge [C]", charge);
+        LOGVAR("Diameter [m]", diameter);
+        LOGVAR("Temperature [K]", temperature);
+        LOGVAR("Weight", weight);
+        LOGVAR("Computed mass [kg]", computed_mass);
     };
 
-    MultiSpecies::MultiSpecies(
+    inline MultiSpecies::MultiSpecies(
         const std::vector<ChemicalSpecies> & sp_vec_,
         const std::vector<unsigned int> vec_n_part_,
         const double & temp_=300.0,
@@ -299,6 +316,35 @@ namespace PICsimulator::Species {
                 ++k;
             }
         }
+    }
+
+    inline MultiSpecies::MultiSpecies(const std::string & ms_filename)
+    {
+        // Load species.json
+        std::ifstream fs(ms_filename);
+        if (!fs){
+            throw std::runtime_error("Cannot open multispecies file: " +
+                ms_filename);
+        }
+        json all = json::parse(fs);
+        auto data = all["data"];
+
+        // reserve n_species element in vectors
+        n_species_ = data["n_components"];
+        species_vec_.reserve(n_species_);
+        n_particles_.reserve(n_species_);
+
+        // populate vectors
+        for(auto & s : data["components"]){
+            species_vec_.push_back(ChemicalSpecies(
+                data["speciesfilename"], s["species"]));
+            n_particles_.push_back(s["comp_part"]);
+        }
+
+        // temp and pressure
+        temperature_=data["temperature"];
+        p_total_=data["total_pressure"];
+
     }
 
     inline unsigned int MultiSpecies::combination_index(
@@ -336,6 +382,24 @@ namespace PICsimulator::Species {
         }
         return;
     };
+
+    inline void MultiSpecies::print() const{
+
+        LOGTITLE("MultiSpecies");
+
+        LOGVAR("Number of species", n_species_);
+        LOGVAR("Total pressure [Pa]", p_total_);
+        LOGVAR("Temperature [K]", temperature_);
+        LOGVAR("Combinations", n_combinations_);
+
+        LOGVEC("n_particles", n_particles_, n_species_);
+
+        LOGTITLE("Species list");
+        for (unsigned int i = 0; i < n_species_; ++i) {
+            LOG("");
+            species_vec_[i].print();  
+        }
+    }
 
 }
 
