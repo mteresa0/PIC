@@ -23,23 +23,23 @@
 
 // LOGGING OPTION for printing simulation info
 #if LOG_ENABLED
-    #define LOG(x) do { std::cout << x << std::endl; } while (0)    
+    #define LOG(x) do { std::cout  << " " << x << std::endl; } while (0)    
     #define LOGVAR(name, value) do { \
-        std::cout << std::left << std::setw(25) << (std::string(name) + ":") \
+        std::cout << std::left << std::setw(25) << (" " +std::string(name) + ":") \
                   << std::right << std::setw(15) << value << std::endl; \
     } while(0)
     #define LOGVEC(name, vector, dim) do { \
-        std::cout << std::left << std::setw(25-2) << (std::string(name) + ":")\
-        << "[ " << std::right << std::setw(12)  << vector[0];\
+        std::cout << std::left << std::setw(25-2) << (" " + std::string(name) + ":")\
+        << "[ " << std::right << std::setw(15)  << vector[0];\
         for(unsigned int i = 1; i<dim; ++i){ \
-            std::cout << ", \n" << std::setw(25) <<" "<< std::right<<  std::setw(12) << vector[i];\
+            std::cout << ", \n" << std::setw(25) <<" "<< std::right<<  std::setw(15) << vector[i];\
         } \
         std::cout << " ]"<<std::endl;\
     } while(0)
 
     inline std::string make_centered_title(
         const std::string &title, 
-        unsigned int width = 70, 
+        unsigned int width = 40, 
         char fill = '=')
     {
         if (title.size() >= width)
