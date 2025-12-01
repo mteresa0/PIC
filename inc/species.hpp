@@ -129,7 +129,7 @@ namespace PICsimulator::Species {
             const double & temp_,
             const double & p_tot_);
 
-        MultiSpecies(const std::string & ms_filename);
+        MultiSpecies(const std::string & ms_filename, double );
             
         // /// @brief default constructor
         // MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
@@ -158,14 +158,20 @@ namespace PICsimulator::Species {
         std::vector<unsigned int> n_particles_;
         /// @brief number of species
         unsigned int n_species_;    
-
+        /// number of combination between species
         unsigned int n_combinations_;  
-
+        /// number of total particles
+        unsigned int n_total_particles_;
+        /// vector of molar fraction for each species
+        std::vector<double> molar_fraction_;
+        /// reduced mass vector (for each combination)
         std::vector<double> reduced_mass_;
         /// neutrals temperature
         double temperature_;
         /// total pressure
         double p_total_;
+
+        double volume;
 
     public:
 
@@ -281,6 +287,7 @@ namespace PICsimulator::Species {
         LOGVAR("Temperature [K]", temperature);
         LOGVAR("Weight", weight);
         LOGVAR("Computed mass [kg]", computed_mass);
+        LOG("");
     };
 
     inline MultiSpecies::MultiSpecies(
@@ -318,7 +325,8 @@ namespace PICsimulator::Species {
         }
     }
 
-    inline MultiSpecies::MultiSpecies(const std::string & ms_filename)
+    inline MultiSpecies::MultiSpecies(const std::string & ms_filename, double vol):
+    volume(vol)
     {
         // Load species.json
         std::ifstream fs(ms_filename);
@@ -333,17 +341,30 @@ namespace PICsimulator::Species {
         n_species_ = data["n_components"];
         species_vec_.reserve(n_species_);
         n_particles_.reserve(n_species_);
+        molar_fraction_.reserve(n_species_);
 
         // populate vectors
+        n_total_particles_ = 0;
         for(auto & s : data["components"]){
             species_vec_.push_back(ChemicalSpecies(
                 data["speciesfilename"], s["species"]));
             n_particles_.push_back(s["comp_part"]);
+            n_total_particles_ += static_cast<unsigned int>(s["comp_part"]);
         }
 
         // temp and pressure
         temperature_=data["temperature"];
-        p_total_=data["total_pressure"];
+        // p_total_=data["total_pressure"];
+
+        // compute molar fractions
+        p_total_ = 0.0;
+        for (unsigned int i = 0; i<n_species_; ++i){
+            molar_fraction_.push_back(1.0*n_particles_[i]/n_total_particles_);
+            // added "1.0*" to make the division between unsigned int work
+
+            p_total_ += 1.0*n_particles_[i]*species_vec_[i].get_weight() * 
+                        BOLTZMANN_K * temperature_ / volume;
+        }       
 
     }
 
@@ -385,7 +406,7 @@ namespace PICsimulator::Species {
 
     inline void MultiSpecies::print() const{
 
-        LOGTITLE("MultiSpecies");
+        LOGTITLE("Gas properties");
 
         LOGVAR("Number of species", n_species_);
         LOGVAR("Total pressure [Pa]", p_total_);
@@ -393,10 +414,14 @@ namespace PICsimulator::Species {
         LOGVAR("Combinations", n_combinations_);
 
         LOGVEC("n_particles", n_particles_, n_species_);
+        LOGVAR("n total part", n_total_particles_);
+        
+        LOGVEC("molar fractions", molar_fraction_ , n_species_);
+
+        LOGVAR("total number density", p_total_/BOLTZMANN_K/temperature_);
 
         LOGTITLE("Species list");
         for (unsigned int i = 0; i < n_species_; ++i) {
-            LOG("");
             species_vec_[i].print();  
         }
     }

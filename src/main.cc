@@ -20,18 +20,21 @@ int main() {
     // PICsimulator::TestSimulators::convergence_test<dim>(
     //     motion, dts, total_time);
 
-    Species::MultiSpecies ms("data/multispecies.json") ;
 
-    ms.print();
-    // Point<dim> lower_vertex(0, 0);
-    // Point<dim> upper_vertex(5e-7, 5e-7);
-    // Domain::PeriodicDomain<dim> domain_data(lower_vertex, upper_vertex);
+    Point<dim> lower_vertex(0, 0);
+    Point<dim> upper_vertex(5e-10, 5e-10);
+    Domain::PeriodicDomain<dim> domain_data(lower_vertex, upper_vertex);
+
+    double vol = domain_data.volume();
 
     // std::vector<Species::ChemicalSpecies> species({Species::N2(), Species::O2()});
 
     // Species::MultiSpecies ms(species, {100, 100});
 
-    // double dt = 1e-13;
+    // double dt = 1e-13;    
+    Species::MultiSpecies ms("data/multispecies.json", vol) ;
+
+    ms.print();
 
     // PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
 
