@@ -339,6 +339,7 @@ namespace PICsimulator::Species {
 
         // reserve n_species element in vectors
         n_species_ = data["n_components"];
+        n_combinations_ = int(0.5*n_species_*(n_species_+1));
         species_vec_.reserve(n_species_);
         n_particles_.reserve(n_species_);
         molar_fraction_.reserve(n_species_);
