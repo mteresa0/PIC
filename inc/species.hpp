@@ -349,6 +349,7 @@ namespace PICsimulator::Species {
         species_vec_.reserve(n_species_);
         n_particles_.reserve(n_species_);
         molar_fraction_.reserve(n_species_);
+        reduced_mass_.reserve(n_combinations_);
 
         // populate vectors
         n_total_particles_ = 0;
@@ -373,6 +374,16 @@ namespace PICsimulator::Species {
                         BOLTZMANN_K * temperature_ / volume;
         }       
 
+        // initialize reduced_mass_ vector
+        unsigned int k = 0;
+        for (unsigned int i = 0; i<n_species_; ++i) {
+            double m_i(species_vec_[i].get_mass());
+            for (unsigned int j = i; j<n_species_; ++j){
+                double m_j(species_vec_[j].get_mass());
+                reduced_mass_.push_back(m_i*m_j/(m_i+m_j));
+                ++k;
+            }
+        }
     }
 
     inline unsigned int MultiSpecies::combination_index(
