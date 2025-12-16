@@ -11,7 +11,7 @@
 #include "simulator.hpp"
 
 template<int dim>
-PICsimulator::Simulator<dim>::Simulator(
+inline PICsimulator::Simulator<dim>::Simulator(
     const double &dt_,
     const double &T_,
     const species_type &species_,
@@ -29,7 +29,7 @@ collision_handler(this)
 {};
 
 template<int dim>
-void PICsimulator::Simulator<dim>::run() {
+inline void PICsimulator::Simulator<dim>::run() {
     LOGTITLE("starting initialization");
     initialize();
 
@@ -114,7 +114,7 @@ void PICsimulator::Simulator<dim>::run() {
 };
 
 template<int dim>
-void PICsimulator::Simulator<dim>::make_grid() {
+inline void PICsimulator::Simulator<dim>::make_grid() {
 
     dealii::GridGenerator::hyper_rectangle(
         triangulation, 
@@ -133,7 +133,7 @@ void PICsimulator::Simulator<dim>::make_grid() {
 };
 
 template<int dim>
-void PICsimulator::Simulator<dim>::insert_particles_dummy()
+inline void PICsimulator::Simulator<dim>::insert_particles_dummy()
 {
     // get upper and lower vertex
     auto upper_vertex = domain_data.get_upper_vertex();
@@ -160,7 +160,7 @@ void PICsimulator::Simulator<dim>::insert_particles_dummy()
 };
 
 template<int dim>
-void PICsimulator::Simulator<dim>::set_initial_velocity()
+inline void PICsimulator::Simulator<dim>::set_initial_velocity()
 {
     // initialize velocity 
     Tensor<1, dim> initial_velocity;
@@ -179,7 +179,7 @@ void PICsimulator::Simulator<dim>::set_initial_velocity()
 };
 
 template <int dim>
-void PICsimulator::Simulator<dim>::boundary_wall( 
+inline void PICsimulator::Simulator<dim>::boundary_wall( 
     const typename Particles::ParticleIterator<dim>         &particle,
     const typename Triangulation<dim>::active_cell_iterator &cell,
     const unsigned int & index_species) 
@@ -208,7 +208,7 @@ void PICsimulator::Simulator<dim>::boundary_wall(
 }
 
 template <int dim>
-void PICsimulator::Simulator<dim>::initialize()
+inline void PICsimulator::Simulator<dim>::initialize()
 {
     if (initialized)
     {
@@ -224,7 +224,7 @@ void PICsimulator::Simulator<dim>::initialize()
     for (unsigned int i = 0; i<n_species; ++i){
         particle_handlers[i].initialize(triangulation, mapping, dim);
         particle_handlers[i].signals.particle_lost.connect(
-        [this, i]( const typename Particles::ParticleIterator<dim>         &particle,
+        [this, i]( const typename Particles::ParticleIterator<dim>    &particle,
                 const typename Triangulation<dim>::active_cell_iterator &cell) {
             this->boundary_wall(particle, cell, i);
             }
@@ -266,7 +266,7 @@ void PICsimulator::Simulator<dim>::initialize()
 }
 
 template<int dim>
-void PICsimulator::Simulator<dim>::print_data_to_files(
+inline void PICsimulator::Simulator<dim>::print_data_to_files(
     const int  & i)
 {
     // for (const auto ph : particle_handlers){

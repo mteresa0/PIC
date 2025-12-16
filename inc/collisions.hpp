@@ -443,7 +443,7 @@ namespace PICsimulator {
     } // end try_collisions
 
     template <int dim, class T>
-    Tensor<1, dim> Collisions<dim, T>::compute_post_collisional_velocity(
+    inline Tensor<1, dim> Collisions<dim, T>::compute_post_collisional_velocity(
         const velocity_type & cr) const
     {
         // initialize post-collisional relative velocity
