@@ -66,6 +66,10 @@ namespace PICsimulator::Species {
             return diameter;
         }
 
+        double temp() const {
+            return temperature;
+        }
+
         /// @brief get scale parameter of the Maxwell distribution
         double get_a() const {
             return BOLTZMANN_K * temperature / real_mass;
@@ -225,6 +229,8 @@ namespace PICsimulator::Species {
 
         /// @brief get number of combinations
         const unsigned int & n_combinations() const {return n_combinations_;}
+
+        const double & temperature() const {return temperature_;};
 
         /// 
         void print() const;
