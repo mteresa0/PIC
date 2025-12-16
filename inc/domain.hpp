@@ -81,7 +81,7 @@ namespace Domain{
             LOGVEC("Upper vertex", upper_vertex, dim);
         }
 
-        double volume(){
+        double volume() const{
             double vol=upper_vertex[0] - lower_vertex[0];
             for (unsigned int i = 1; i<dim; ++i){
                 vol *= upper_vertex[i] - lower_vertex[i];
