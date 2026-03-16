@@ -1,14 +1,26 @@
 {
-    "data": {
-        "name": "Multispecies1",
-        "speciesfilename": "data/species.json",
-        "temperature": 300.0,
-        "total_pressure": 1e5,
-        "n_components": 2,
-        "components": [
-            { "species": "N2", "comp_part": 780 },
-            { "species": "O2", "comp_part": 220 }
-        ]
-    }
+    "data": [
+        {
+            "name": "Multispecies1",
+            "speciesfilename": "data/species.json",
+            "temperature": 300.0,
+            "total_pressure": 1e5,
+            "n_components": 2,
+            "components": [
+                { "species": "N2", "comp_part": 780 },
+                { "species": "O2", "comp_part": 220 }
+            ]
+        },
+        {
+            "name": "SimpleNeutral1",
+            "speciesfilename": "data/species.json",
+            "temperature": 300.0,
+            "total_pressure": 1e5,
+            "n_components": 1,
+            "components": [
+                { "species": "N2", "comp_part": 5 }
+            ]
+        }
+    ]
 }
   

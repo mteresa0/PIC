@@ -133,7 +133,7 @@ namespace PICsimulator::Species {
             const double & temp_,
             const double & p_tot_);
 
-        MultiSpecies(const std::string & ms_filename, double );
+        MultiSpecies(const std::string & ms_filename, const std::string &, double );
             
         // /// @brief default constructor
         // MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
@@ -331,7 +331,7 @@ namespace PICsimulator::Species {
         }
     }
 
-    inline MultiSpecies::MultiSpecies(const std::string & ms_filename, double vol):
+    inline MultiSpecies::MultiSpecies(const std::string & ms_filename, const std::string &ms_name, double vol):
     volume(vol)
     {
         // Load species.json
@@ -340,50 +340,66 @@ namespace PICsimulator::Species {
             throw std::runtime_error("Cannot open multispecies file: " +
                 ms_filename);
         }
+
         json all = json::parse(fs);
-        auto data = all["data"];
 
-        // reserve n_species element in vectors
-        n_species_ = data["n_components"];
-        n_combinations_ = int(0.5*n_species_*(n_species_+1));
-        species_vec_.reserve(n_species_);
-        n_particles_.reserve(n_species_);
-        molar_fraction_.reserve(n_species_);
-        reduced_mass_.reserve(n_combinations_);
+        bool found = false;
 
-        // populate vectors
-        n_total_particles_ = 0;
-        for(auto & s : data["components"]){
-            species_vec_.push_back(ChemicalSpecies(
-                data["speciesfilename"], s["species"]));
-            n_particles_.push_back(s["comp_part"]);
-            n_total_particles_ += static_cast<unsigned int>(s["comp_part"]);
+        for (auto& data : all["data"]) {
+
+            if (data["name"] == ms_name) {
+                found = true;
+
+                // reserve n_species element in vectors
+                n_species_ = data["n_components"];
+                n_combinations_ = int(0.5*n_species_*(n_species_+1));
+                species_vec_.reserve(n_species_);
+                n_particles_.reserve(n_species_);
+                molar_fraction_.reserve(n_species_);
+                reduced_mass_.reserve(n_combinations_);
+
+                // populate vectors
+                n_total_particles_ = 0;
+                for(auto & s : data["components"]){
+                    species_vec_.push_back(ChemicalSpecies(
+                        data["speciesfilename"], s["species"]));
+                    n_particles_.push_back(s["comp_part"]);
+                    n_total_particles_ += static_cast<unsigned int>(s["comp_part"]);
+
+                }
+
+                // temp and pressure
+                temperature_=data["temperature"];
+                // p_total_=data["total_pressure"];
+
+                // compute molar fractions
+                p_total_ = 0.0;
+                for (unsigned int i = 0; i<n_species_; ++i){
+                    molar_fraction_.push_back(1.0*n_particles_[i]/n_total_particles_);
+                    // added "1.0*" to make the division between unsigned int work
+
+                    p_total_ += 1.0*n_particles_[i]*species_vec_[i].get_weight() * 
+                                BOLTZMANN_K * temperature_ / volume;
+                }       
+
+                // initialize reduced_mass_ vector
+                unsigned int k = 0;
+                for (unsigned int i = 0; i<n_species_; ++i) {
+                    double m_i(species_vec_[i].get_mass());
+                    for (unsigned int j = i; j<n_species_; ++j){
+                        double m_j(species_vec_[j].get_mass());
+                        reduced_mass_.push_back(m_i*m_j/(m_i+m_j));
+                        ++k;
+                    }
+                }
+            };
         }
 
-        // temp and pressure
-        temperature_=data["temperature"];
-        // p_total_=data["total_pressure"];
-
-        // compute molar fractions
-        p_total_ = 0.0;
-        for (unsigned int i = 0; i<n_species_; ++i){
-            molar_fraction_.push_back(1.0*n_particles_[i]/n_total_particles_);
-            // added "1.0*" to make the division between unsigned int work
-
-            p_total_ += 1.0*n_particles_[i]*species_vec_[i].get_weight() * 
-                        BOLTZMANN_K * temperature_ / volume;
-        }       
-
-        // initialize reduced_mass_ vector
-        unsigned int k = 0;
-        for (unsigned int i = 0; i<n_species_; ++i) {
-            double m_i(species_vec_[i].get_mass());
-            for (unsigned int j = i; j<n_species_; ++j){
-                double m_j(species_vec_[j].get_mass());
-                reduced_mass_.push_back(m_i*m_j/(m_i+m_j));
-                ++k;
-            }
+        if (!found) {
+            throw std::runtime_error("Cannot find multispecies: " +
+                ms_name + " in file " + ms_filename);
         }
+
     }
 
     inline unsigned int MultiSpecies::combination_index(
