@@ -22,11 +22,11 @@ species(std::move(species_)),
 n_species(species.n_species()),
 mapping(1), 
 dof_handler(triangulation),
-fe(1),
 particle_handlers(n_species),
 domain_data(domain_data_),
 streaming_algorithm(this),
-collision_handler(this)
+collision_handler(this),
+field_solver(get_dof_handler())
 {};
 
 template<int dim>
