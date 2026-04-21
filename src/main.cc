@@ -31,13 +31,13 @@ int main() {
 
     // Species::MultiSpecies ms(species, {100, 100});
 
-    // double dt = 1e-13;    
+    double dt = 1e-13;    
     Species::MultiSpecies ms("data/multispecies.json", "SimpleNeutral1", vol) ;
     ms.print();
 
-    // PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
+    PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
 
-    // simulator.run();
+    simulator.solve_test();
     
     
 }
