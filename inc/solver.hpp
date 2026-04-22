@@ -39,9 +39,7 @@ namespace PICsimulator{
             fe(1)
             {};
 
-        void run_solver_test(){
-
-            // setup system
+        void setup_system() {
             dof_handler.distribute_dofs(fe);
 
             DynamicSparsityPattern dsp(dof_handler.n_dofs());
@@ -51,9 +49,9 @@ namespace PICsimulator{
             system_matrix.reinit(sparsity_pattern);
             solution.reinit(dof_handler.n_dofs());
             system_rhs.reinit(dof_handler.n_dofs());
-            //
-  
-            // assemble system
+        } // end setup system
+
+        void assemble() {
             const QGauss<2> quadrature_formula(fe.degree+1);
             FEValues<2> fe_values(fe,
                         quadrature_formula,
@@ -77,16 +75,17 @@ namespace PICsimulator{
                 for (const unsigned int q_index : fe_values.quadrature_point_indices())
                     {
                     for (const unsigned int i : fe_values.dof_indices())
+                        {
                         for (const unsigned int j : fe_values.dof_indices())
-                        cell_matrix(i, j) +=
-                            (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
-                            fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
-                            fe_values.JxW(q_index));           // dx
+                            cell_matrix(i, j) +=
+                                (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
+                                fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
+                                fe_values.JxW(q_index));           // dx
             
-                    for (const unsigned int i : fe_values.dof_indices())
                         cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
                                         1. *                                // f(x_q)
                                         fe_values.JxW(q_index));            // dx
+                        }
                     }
                 cell->get_dof_indices(local_dof_indices);
             
@@ -109,20 +108,18 @@ namespace PICsimulator{
                                                 system_matrix,
                                                 solution,
                                                 system_rhs);
+        } // end assemble system
 
-            //
-
-            // SOLVER
+        void solve() {
             SolverControl            solver_control(1000, 1e-6 * system_rhs.l2_norm());
             SolverCG<Vector<double>> solver(solver_control);
             solver.solve(system_matrix, solution, system_rhs, PreconditionIdentity());
             
             std::cout << solver_control.last_step()
             << " CG iterations needed to obtain convergence." << std::endl;
-            //
+        } // end solve
 
-
-            // OUTPUT
+        void save_output() {
 
             DataOut<2> data_out;
             data_out.attach_dof_handler(dof_handler);
@@ -133,14 +130,32 @@ namespace PICsimulator{
             std::ofstream     output(filename);
             data_out.write_vtk(output);
             std::cout << "Output written to " << filename << std::endl;
+        } // end save output
 
+        void run_solver_test(){
+
+            // setup system
+            setup_system();
+            //
+  
+            // assemble system
+            assemble();
+            //
+
+            // SOLVER
+            solve();
+            //
+
+
+            // OUTPUT
+            save_output();
             //
         };
         
     private:
         //////////// methods
         // void setup_system();
-        // void assemble_system();
+        // void assemble();
         // void solve();
         // void print();
 
