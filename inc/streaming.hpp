@@ -2,7 +2,6 @@
  * @file streaming.hpp
  * @author Maria Teresa Cazzola
  * @brief Streaming class for the PIC simulator
- * @version 0.1
  * @date 2025-04-19
  * 
  * @copyright Copyright (c) 2025
@@ -24,7 +23,7 @@ namespace PICsimulator{
     template<int dim>
     class Simulator;
 
-    /// @brief manges the streaming algorithm.
+    /// @brief manages the streaming algorithm.
     /// @details the developed streaming algorithm is the Verlet algorithm.
     /// At each timestep (n), the simulator call for `advance` method which 
     /// updates the particle locations and velocities at the next timestep  

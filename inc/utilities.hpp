@@ -1,8 +1,8 @@
 /**
  * @file utilities.hpp
  * @author Maria Teresa Cazzola
- * @brief 
- * @version 0.1
+ * @brief toolkit storing useful functions for logging, extra outputs, timers, 
+ * random generation and some common basic function with dealii structures.
  * @date 2025-04-28
  * 
  * @copyright Copyright (c) 2025

@@ -1,8 +1,8 @@
 /**
- * @file simulator.hpp
+ * @file solver.hpp
  * @author Maria Teresa Cazzola
- * @brief declarations of class simulator
- * @date 2025-04-11
+ * @brief Field solver class for the PIC simulator
+ * @date 2026-04-22
  *
  * @copyright Copyright (c) 2025
  *
