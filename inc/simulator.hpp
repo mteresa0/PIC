@@ -100,10 +100,6 @@ namespace PICsimulator
             return species;
         };
 
-        DoFHandler<dim>& get_dof_handler(){
-            return dof_handler;
-        }
-
     private:
         /// @brief It handles lost particles and reinsert them in the domain.
         /// This function is called when a particle leaves the domain and it

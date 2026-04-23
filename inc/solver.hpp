@@ -30,12 +30,21 @@
 
 namespace PICsimulator{
     using namespace dealii;
+
         
     template <int dim>
     class Solver{
+
+    using ph_type = dealii::Particles::ParticleHandler<dim>;
+    using vec_ph = std::vector<ph_type>;
+
     public:
-        explicit Solver(DoFHandler<dim>& dof_h_):
+        explicit Solver(DoFHandler<dim>& dof_h_, 
+                        const MappingQ<dim>& mapping_, 
+                        vec_ph& phs_):
             dof_handler(dof_h_),
+            mapping(mapping_),
+            phs(phs_),
             fe(1)
             {};
 
@@ -52,6 +61,8 @@ namespace PICsimulator{
     private:
         //////////// members
         DoFHandler<dim>& dof_handler;
+        const dealii::MappingQ<dim>& mapping;
+        vec_ph& phs;
         const dealii::FE_Q<dim> fe;
         dealii::SparsityPattern sparsity_pattern;
         dealii::SparseMatrix<double> system_matrix;
@@ -73,6 +84,8 @@ namespace PICsimulator{
         system_matrix.reinit(sparsity_pattern);
         solution.reinit(dof_handler.n_dofs());
         system_rhs.reinit(dof_handler.n_dofs());
+
+        LOGVAR("ndof", dof_handler.n_dofs());
     } // end setup system
 
     template <int dim>
@@ -89,6 +102,7 @@ namespace PICsimulator{
         
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
 
+        LOGVAR("dof per cell", dofs_per_cell);
             
         for (const auto &cell : dof_handler.active_cell_iterators())
         {
@@ -96,11 +110,29 @@ namespace PICsimulator{
         
             cell_matrix = 0;
             cell_rhs    = 0;
+
+            unsigned int n_part = phs[0].n_particles_in_cell(cell);
+            LOGVAR("particles in cell",n_part);
+            if(n_part>0){
+                auto pic = phs[0].particles_in_cell(cell);
+                auto it_p = pic.begin();
+                Point<dim> part_loc(it_p->get_location());
+                Point<dim> ref_loc = mapping.transform_real_to_unit_cell(cell, part_loc);
+                LOGVEC("particle_loc", part_loc, 2);
+                LOGVEC("ref_loc", ref_loc, 2);
+                LOGVAR("phi0", fe.shape_value(0,ref_loc));
+                LOGVAR("phi1", fe.shape_value(1,ref_loc));
+                LOGVAR("phi2", fe.shape_value(2,ref_loc));
+                LOGVAR("phi3", fe.shape_value(3,ref_loc));
+
+                LOGVAR("sum", fe.shape_value(0,ref_loc)+fe.shape_value(1,ref_loc)+fe.shape_value(2,ref_loc)+fe.shape_value(3,ref_loc));
+                LOG(" -- ");
+            }
         
             for (const unsigned int q_index : fe_values.quadrature_point_indices())
-                {
+            {
                 for (const unsigned int i : fe_values.dof_indices())
-                    {
+                {
                     for (const unsigned int j : fe_values.dof_indices())
                         cell_matrix(i, j) +=
                             (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
@@ -110,8 +142,8 @@ namespace PICsimulator{
                     cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
                                     1. *                                // f(x_q)
                                     fe_values.JxW(q_index));            // dx
-                    }
                 }
+            }
             cell->get_dof_indices(local_dof_indices);
         
             for (const unsigned int i : fe_values.dof_indices())
