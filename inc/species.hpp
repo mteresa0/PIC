@@ -61,6 +61,11 @@ namespace PICsimulator::Species {
             return weight;
         }
 
+        /// @brief get computational weight
+        double get_charge() const {
+            return charge*weight;
+        }
+
         /// @brief get diameter
         double get_diameter() const {
             return diameter;

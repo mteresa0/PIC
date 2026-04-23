@@ -31,20 +31,29 @@
 namespace PICsimulator{
     using namespace dealii;
 
-        
+    // forward declaration of Simulator
+    template <int dim>
+    class Simulator;
+
+    /// @brief It solves the potential field in order to get the particle acceleration.
+    /// @tparam dim 
     template <int dim>
     class Solver{
 
-    using ph_type = dealii::Particles::ParticleHandler<dim>;
-    using vec_ph = std::vector<ph_type>;
+        using species_type = Species::MultiSpecies;
+        using ph_type = dealii::Particles::ParticleHandler<dim>;
+        using vec_ph = std::vector<ph_type>;
 
     public:
         explicit Solver(DoFHandler<dim>& dof_h_, 
                         const MappingQ<dim>& mapping_, 
-                        vec_ph& phs_):
+                        vec_ph& phs_,
+                        species_type& ms_
+                        ):
             dof_handler(dof_h_),
             mapping(mapping_),
             phs(phs_),
+            ms(ms_),
             fe(1)
             {};
 
@@ -63,6 +72,7 @@ namespace PICsimulator{
         DoFHandler<dim>& dof_handler;
         const dealii::MappingQ<dim>& mapping;
         vec_ph& phs;
+        const species_type & ms;
         const dealii::FE_Q<dim> fe;
         dealii::SparsityPattern sparsity_pattern;
         dealii::SparseMatrix<double> system_matrix;
@@ -90,8 +100,8 @@ namespace PICsimulator{
 
     template <int dim>
     inline void Solver<dim>::assemble()  {
-        const QGauss<2> quadrature_formula(fe.degree+1);
-        FEValues<2> fe_values(fe,
+        const QGauss<dim> quadrature_formula(fe.degree+1);
+        FEValues<dim> fe_values(fe,
                     quadrature_formula,
                     update_values | update_gradients | update_JxW_values);
         
@@ -111,24 +121,38 @@ namespace PICsimulator{
             cell_matrix = 0;
             cell_rhs    = 0;
 
-            unsigned int n_part = phs[0].n_particles_in_cell(cell);
-            LOGVAR("particles in cell",n_part);
-            if(n_part>0){
-                auto pic = phs[0].particles_in_cell(cell);
-                auto it_p = pic.begin();
-                Point<dim> part_loc(it_p->get_location());
-                Point<dim> ref_loc = mapping.transform_real_to_unit_cell(cell, part_loc);
-                LOGVEC("particle_loc", part_loc, 2);
-                LOGVEC("ref_loc", ref_loc, 2);
-                LOGVAR("phi0", fe.shape_value(0,ref_loc));
-                LOGVAR("phi1", fe.shape_value(1,ref_loc));
-                LOGVAR("phi2", fe.shape_value(2,ref_loc));
-                LOGVAR("phi3", fe.shape_value(3,ref_loc));
+            // * compute rhs *
+            for(unsigned int a = 0; a<ms.n_species(); ++a){
+                unsigned int n_part = phs[a].n_particles_in_cell(cell);
+                LOGVAR("n_pic "+ms[a].get_name(),n_part);
+                double q = ms[a].get_charge()/EPS0;
+                if(q!=0 && n_part>0){
 
-                LOGVAR("sum", fe.shape_value(0,ref_loc)+fe.shape_value(1,ref_loc)+fe.shape_value(2,ref_loc)+fe.shape_value(3,ref_loc));
-                LOG(" -- ");
+                    auto pic = phs[a].particles_in_cell(cell);
+                    for(auto& it_p : pic) {
+                        Point<dim> part_loc(it_p.get_location());
+                        Point<dim> ref_loc = mapping.transform_real_to_unit_cell(cell, part_loc);
+
+                        for(unsigned int i : fe_values.dof_indices()){
+                            cell_rhs(i) += q* fe.shape_value(i,ref_loc);
+                        }
+                    LOGVEC("particle_loc", part_loc, 2);
+                    LOGVEC("ref_loc", ref_loc, 2);
+                    LOGVAR("charge", q);
+                    // LOGVAR("phi0", fe.shape_value(0,ref_loc));
+                    // LOGVAR("phi1", fe.shape_value(1,ref_loc));
+                    // LOGVAR("phi2", fe.shape_value(2,ref_loc));
+                    // LOGVAR("phi3", fe.shape_value(3,ref_loc));
+
+                    // LOGVAR("sum", fe.shape_value(0,ref_loc)+fe.shape_value(1,ref_loc)+fe.shape_value(2,ref_loc)+fe.shape_value(3,ref_loc));
+                    LOG(" -- ");
+                    }
+
+                }
             }
         
+
+            // * compute matrix *
             for (const unsigned int q_index : fe_values.quadrature_point_indices())
             {
                 for (const unsigned int i : fe_values.dof_indices())
@@ -139,9 +163,9 @@ namespace PICsimulator{
                             fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
                             fe_values.JxW(q_index));           // dx
         
-                    cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
-                                    1. *                                // f(x_q)
-                                    fe_values.JxW(q_index));            // dx
+                    // cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
+                    //                 1. *                                // f(x_q)
+                    //                 fe_values.JxW(q_index));            // dx
                 }
             }
             cell->get_dof_indices(local_dof_indices);
@@ -159,7 +183,7 @@ namespace PICsimulator{
         std::map<types::global_dof_index, double> boundary_values;
         VectorTools::interpolate_boundary_values(dof_handler,
                                                 types::boundary_id(0),
-                                                Functions::ZeroFunction<2>(),
+                                                Functions::ZeroFunction<dim>(),
                                                 boundary_values);
         MatrixTools::apply_boundary_values(boundary_values,
                                             system_matrix,
@@ -180,7 +204,7 @@ namespace PICsimulator{
     template <int dim>
     inline void Solver<dim>::save_output() {
 
-        DataOut<2> data_out;
+        DataOut<dim> data_out;
         data_out.attach_dof_handler(dof_handler);
         data_out.add_data_vector(solution, "solution");
         data_out.build_patches();

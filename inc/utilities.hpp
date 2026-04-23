@@ -123,6 +123,8 @@ static const double BOLTZMANN_K = 1.380649e-23;  // J/K
 static const double TEMPERATURE = 100;         // K
 /// Electron mass in kg
 static const double ELECTR_MASS = 1.9093837e-31; // kg
+/// Vacuum permettivity
+static const double EPS0 = 8.8541878188e-12; // C2⋅s2⋅kg−1⋅m−3
 
 namespace Timers {
 
