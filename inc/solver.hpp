@@ -35,21 +35,28 @@ namespace PICsimulator{
     template <int dim>
     class Simulator;
 
-    /// @brief It solves the potential field in order to get the particle acceleration.
-    /// @tparam dim 
+    /// @brief solves the electrostatic potential field.
+    /// @details Assembles and solves the Poisson problem, then provides the 
+    /// electric potential from which the electric field is computed.
+    /// @tparam dim
     template <int dim>
     class Solver{
 
         using species_type = Species::MultiSpecies;
-        using ph_type = dealii::Particles::ParticleHandler<dim>;
-        using vec_ph = std::vector<ph_type>;
+        using ph_type      = dealii::Particles::ParticleHandler<dim>;
+        using vec_ph       = std::vector<ph_type>;
 
     public:
-        explicit Solver(DoFHandler<dim>& dof_h_, 
-                        const MappingQ<dim>& mapping_, 
+        /// @brief constructs the solver.
+        /// @param dof_h_ DOF handler associated with the simulation mesh
+        /// @param mapping_ mapping used for real-cell transformations
+        /// @param phs_ particle handler vector
+        /// @param ms_ multispecies data structure
+        explicit Solver(DoFHandler<dim>& dof_h_,
+                        const MappingQ<dim>& mapping_,
                         vec_ph& phs_,
-                        species_type& ms_
-                        ):
+                        species_type& ms_)
+            :
             dof_handler(dof_h_),
             mapping(mapping_),
             phs(phs_),
@@ -60,34 +67,64 @@ namespace PICsimulator{
                     update_values | update_gradients | update_JxW_values)
             {};
 
+        /// @brief initializes linear algebra structures and DOF data
         void setup_system();
 
+        /// @brief assembles the stiffness matrix of the Poisson problem
+        /// @details builds the matrix associated with -Laplace(phi)
         void assemble_matrix();
 
-        /// @brief computes and assembles the rhs
-        /// @details computes the term integral(rho(x)/eps_0 * phi_i(x) * dx).
+        /// @brief computes and assembles the right-hand side vector 
+        /// @details evaluates the charge density contribution
+        /// integral(rho(x)/eps_0 * phi_i(x) dx) 
         void assemble_rhs();
 
+        /// @brief applies boundary conditions to matrix and right-hand side 
         void add_bc();
 
+        /// @brief solves the linear system for the electric potential 
         void solve_potential();
 
+        /// @brief writes solution data to output files 
         void save_output();
 
+        /// @brief runs a standalone test of the solver 
         void run_solver_test();
-        
+
     private:
         //////////// members
+
+        /// @brief DOF handler of the simulation mesh 
         DoFHandler<dim>& dof_handler;
+
+        /// @brief mapping between reference and real cells 
         const dealii::MappingQ<dim>& mapping;
+
+        /// @brief particle handler vector
         vec_ph& phs;
-        const species_type & ms;
+
+        /// @brief multispecies container
+        const species_type& ms;
+
+        /// @brief scalar Lagrange finite element used for the potential
         const dealii::FE_Q<dim> fe;
+
+        /// @brief Gauss quadrature rule used for cell integration
         const QGauss<dim> quadrature_formula;
+
+        /// @brief finite-element evaluator on quadrature points
         FEValues<dim> fe_values;
+
+        /// @brief sparsity pattern describing the nonzero structure of the system matrix
         dealii::SparsityPattern sparsity_pattern;
+
+        /// @brief global sparse matrix of the linear system 
         dealii::SparseMatrix<double> system_matrix;
+
+        /// @brief solution vector containing the nodal potential 
         dealii::Vector<double> solution;
+
+        /// @brief right-hand side vector of the linear system 
         dealii::Vector<double> system_rhs;
 
     }; // end Solver class
