@@ -19,6 +19,7 @@
 #include <deal.II/particles/particle_handler.h>
 #include <deal.II/particles/particle_iterator.h>
 #include <deal.II/particles/particle_accessor.h>
+#include <deal.II/particles/data_out.h>
 #include <deal.II/base/point.h>
 
 #include <fstream>
@@ -76,6 +77,8 @@ namespace PICsimulator
         void solve_test(){
             initialize();
             field_solver.run_solver_test();
+
+            print_data_to_files(0);
         };
         ///////////
 

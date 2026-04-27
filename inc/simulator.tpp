@@ -270,26 +270,28 @@ template<int dim>
 inline void PICsimulator::Simulator<dim>::print_data_to_files(
     const int  & i)
 {
-    // for (const auto ph : particle_handlers){
-    // Particles::DataOut<dim> particle_out;
-    
-    // particle_out.build_patches( 
-    //     ph,
-    //     std::vector<std::string>(dim, "velocity"),
-    //     std::vector<DataComponentInterpretation::DataComponentInterpretation>(
-    //         dim, 
-    //         DataComponentInterpretation::component_is_part_of_vector));
+    for (unsigned int ind_sp = 0; ind_sp<n_species; ++ind_sp){
 
-    // DataOutBase::VtkFlags output_flags;
-    // output_flags.time                       = dt*i;
-    // output_flags.cycle                      = i;
-    // output_flags.physical_units["velocity"] = "m/s";
+        Particles::DataOut<dim> particle_out;
 
-    // particle_out.set_flags(output_flags);
+        particle_out.build_patches( 
+            particle_handlers[ind_sp],
+            std::vector<std::string>(dim, "velocity"),
+            std::vector<DataComponentInterpretation::DataComponentInterpretation>(
+                dim, 
+                DataComponentInterpretation::component_is_part_of_vector));
 
-    // std::ofstream output("outputs/particles-" +
-    //                     Utilities::int_to_string(i, 5) +
-    //                     ".vtu");
-    // particle_out.write_vtu(output);
-    // }
+        DataOutBase::VtkFlags output_flags;
+        output_flags.time                       = dt*i;
+        output_flags.cycle                      = i;
+        output_flags.physical_units["velocity"] = "m/s";
+
+        particle_out.set_flags(output_flags);
+
+        std::ofstream output("outputs/part-sp"+
+                            Utilities::int_to_string(ind_sp,0)+"-"+
+                            Utilities::int_to_string(i, 5) +
+                            ".vtu");
+        particle_out.write_vtu(output);
+    }
 }
