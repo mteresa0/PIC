@@ -61,6 +61,8 @@ namespace PICsimulator{
 
         void assemble();
 
+        void add_bc();
+
         void solve();
 
         void save_output();
@@ -126,6 +128,7 @@ namespace PICsimulator{
                 unsigned int n_part = phs[a].n_particles_in_cell(cell);
                 LOGVAR("n_pic "+ms[a].get_name(),n_part);
                 double q = ms[a].get_charge()/EPS0;
+
                 if(q!=0 && n_part>0){
 
                     auto pic = phs[a].particles_in_cell(cell);
@@ -158,14 +161,14 @@ namespace PICsimulator{
                 for (const unsigned int i : fe_values.dof_indices())
                 {
                     for (const unsigned int j : fe_values.dof_indices())
-                        cell_matrix(i, j) +=
+                        cell_matrix(i, j) += 
                             (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
                             fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
-                            fe_values.JxW(q_index));           // dx
-        
-                    // cell_rhs(i) += (fe_values.shape_value(i, q_index) * // phi_i(x_q)
-                    //                 1. *                                // f(x_q)
-                    //                 fe_values.JxW(q_index));            // dx
+                            fe_values.JxW(q_index))
+                            // + 1e-15 * (fe_values.shape_value(i, q_index) * //penalty term
+                            // fe_values.shape_value(j, q_index) *
+                            // fe_values.JxW(q_index))
+                            ;
                 }
             }
             cell->get_dof_indices(local_dof_indices);
@@ -179,26 +182,43 @@ namespace PICsimulator{
             for (const unsigned int i : fe_values.dof_indices())
                 system_rhs(local_dof_indices[i]) += cell_rhs(i);
         }
-
-        std::map<types::global_dof_index, double> boundary_values;
-        VectorTools::interpolate_boundary_values(dof_handler,
-                                                types::boundary_id(0),
-                                                Functions::ZeroFunction<dim>(),
-                                                boundary_values);
-        MatrixTools::apply_boundary_values(boundary_values,
-                                            system_matrix,
-                                            solution,
-                                            system_rhs);
     } // end assemble system
 
     template <int dim>
+    inline void Solver<dim>::add_bc()
+    {
+        // // Neumann + 1 fixed point
+        // std::map<types::global_dof_index, double> boundary_values;
+        // boundary_values[0] = 0.0; 
+        // MatrixTools::apply_boundary_values(boundary_values, system_matrix, solution, system_rhs);
+
+        // // DIRICHLET
+        // std::map<types::global_dof_index, double> boundary_values;
+        // VectorTools::interpolate_boundary_values(dof_handler,
+        //                                         types::boundary_id(0),
+        //                                         Functions::ZeroFunction<dim>(),
+        //                                         boundary_values);
+        // MatrixTools::apply_boundary_values(boundary_values,
+        //                                     system_matrix,
+        //                                     solution,
+        //                                     system_rhs);
+
+    }
+
+    template <int dim>
     inline void Solver<dim>::solve() {
-        SolverControl            solver_control(1000, 1e-6 * system_rhs.l2_norm());
+        SolverControl            solver_control(1000, 1e-2 * system_rhs.l2_norm());
         SolverCG<Vector<double>> solver(solver_control);
         solver.solve(system_matrix, solution, system_rhs, PreconditionIdentity());
         
         std::cout << solver_control.last_step()
         << " CG iterations needed to obtain convergence." << std::endl;
+
+        // Normalise the solution 
+        QGauss<dim> quadrature(fe.degree + 1);
+        double mean_value = VectorTools::compute_mean_value(dof_handler, quadrature, solution, 0);
+        solution.add(-mean_value);
+
     } // end solve
 
     template <int dim>
@@ -224,6 +244,10 @@ namespace PICsimulator{
 
         // assemble system
         assemble();
+        //
+
+        // boundary conditions
+        add_bc();
         //
 
         // SOLVER
