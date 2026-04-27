@@ -54,12 +54,19 @@ namespace PICsimulator{
             mapping(mapping_),
             phs(phs_),
             ms(ms_),
-            fe(1)
+            fe(1),
+            quadrature_formula(fe.degree+1),
+            fe_values(fe, quadrature_formula,
+                    update_values | update_gradients | update_JxW_values)
             {};
 
         void setup_system();
 
-        void assemble();
+        void assemble_matrix();
+
+        /// @brief computes and assembles the rhs
+        /// @details computes the term integral(rho(x)/eps_0 * phi_i(x) * dx).
+        void assemble_rhs();
 
         void add_bc();
 
@@ -76,6 +83,8 @@ namespace PICsimulator{
         vec_ph& phs;
         const species_type & ms;
         const dealii::FE_Q<dim> fe;
+        const QGauss<dim> quadrature_formula;
+        FEValues<dim> fe_values;
         dealii::SparsityPattern sparsity_pattern;
         dealii::SparseMatrix<double> system_matrix;
         dealii::Vector<double> solution;
@@ -101,32 +110,61 @@ namespace PICsimulator{
     } // end setup system
 
     template <int dim>
-    inline void Solver<dim>::assemble()  {
-        const QGauss<dim> quadrature_formula(fe.degree+1);
-        FEValues<dim> fe_values(fe,
-                    quadrature_formula,
-                    update_values | update_gradients | update_JxW_values);
-        
+    inline void Solver<dim>::assemble_matrix()  {
+        LOG("ASSEMBLE_MATRIX");
         const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
 
         FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
-        Vector<double>     cell_rhs(dofs_per_cell);
         
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-
-        LOGVAR("dof per cell", dofs_per_cell);
             
         for (const auto &cell : dof_handler.active_cell_iterators())
         {
             fe_values.reinit(cell);
         
             cell_matrix = 0;
+
+            // * compute matrix *
+            for (const unsigned int q_index : fe_values.quadrature_point_indices())
+            {
+                for (const unsigned int i : fe_values.dof_indices())
+                {
+                    for (const unsigned int j : fe_values.dof_indices())
+                        cell_matrix(i, j) += 
+                            (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
+                            fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
+                            fe_values.JxW(q_index));
+                }
+            }
+            cell->get_dof_indices(local_dof_indices);
+        
+            for (const unsigned int i : fe_values.dof_indices())
+                for (const unsigned int j : fe_values.dof_indices())
+                system_matrix.add(local_dof_indices[i],
+                                    local_dof_indices[j],
+                                    cell_matrix(i, j));
+        }
+    } // end assemble_matrix
+
+    template <int dim>
+    inline void Solver<dim>::assemble_rhs() {
+        LOG("ASSEMBLE_RHS");
+        const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
+
+        Vector<double>     cell_rhs(dofs_per_cell);
+        
+        std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
+            
+        for (const auto &cell : dof_handler.active_cell_iterators())
+        {
+            fe_values.reinit(cell);
+
             cell_rhs    = 0;
 
             // * compute rhs *
             for(unsigned int a = 0; a<ms.n_species(); ++a){
                 unsigned int n_part = phs[a].n_particles_in_cell(cell);
-                LOGVAR("n_pic "+ms[a].get_name(),n_part);
+                
                 double q = ms[a].get_charge()/EPS0;
 
                 if(q!=0 && n_part>0){
@@ -139,50 +177,27 @@ namespace PICsimulator{
                         for(unsigned int i : fe_values.dof_indices()){
                             cell_rhs(i) += q* fe.shape_value(i,ref_loc);
                         }
-                    LOGVEC("particle_loc", part_loc, 2);
-                    LOGVEC("ref_loc", ref_loc, 2);
-                    LOGVAR("charge", q);
+                    // LOGVEC("particle_loc", part_loc, 2);
+                    // LOGVEC("ref_loc", ref_loc, 2);
+                    // LOGVAR("charge", q);
                     // LOGVAR("phi0", fe.shape_value(0,ref_loc));
                     // LOGVAR("phi1", fe.shape_value(1,ref_loc));
                     // LOGVAR("phi2", fe.shape_value(2,ref_loc));
                     // LOGVAR("phi3", fe.shape_value(3,ref_loc));
 
                     // LOGVAR("sum", fe.shape_value(0,ref_loc)+fe.shape_value(1,ref_loc)+fe.shape_value(2,ref_loc)+fe.shape_value(3,ref_loc));
-                    LOG(" -- ");
+                    // LOG(" -- ");
                     }
 
                 }
             }
         
-
-            // * compute matrix *
-            for (const unsigned int q_index : fe_values.quadrature_point_indices())
-            {
-                for (const unsigned int i : fe_values.dof_indices())
-                {
-                    for (const unsigned int j : fe_values.dof_indices())
-                        cell_matrix(i, j) += 
-                            (fe_values.shape_grad(i, q_index) * // grad phi_i(x_q)
-                            fe_values.shape_grad(j, q_index) * // grad phi_j(x_q)
-                            fe_values.JxW(q_index))
-                            // + 1e-15 * (fe_values.shape_value(i, q_index) * //penalty term
-                            // fe_values.shape_value(j, q_index) *
-                            // fe_values.JxW(q_index))
-                            ;
-                }
-            }
             cell->get_dof_indices(local_dof_indices);
-        
-            for (const unsigned int i : fe_values.dof_indices())
-                for (const unsigned int j : fe_values.dof_indices())
-                system_matrix.add(local_dof_indices[i],
-                                    local_dof_indices[j],
-                                    cell_matrix(i, j));
         
             for (const unsigned int i : fe_values.dof_indices())
                 system_rhs(local_dof_indices[i]) += cell_rhs(i);
         }
-    } // end assemble system
+    }; // end assemble rhs
 
     template <int dim>
     inline void Solver<dim>::add_bc()
@@ -207,7 +222,7 @@ namespace PICsimulator{
 
     template <int dim>
     inline void Solver<dim>::solve() {
-        SolverControl            solver_control(1000, 1e-2 * system_rhs.l2_norm());
+        SolverControl            solver_control(1000, 1e-6 * system_rhs.l2_norm());
         SolverCG<Vector<double>> solver(solver_control);
         solver.solve(system_matrix, solution, system_rhs, PreconditionIdentity());
         
@@ -243,7 +258,8 @@ namespace PICsimulator{
         //
 
         // assemble system
-        assemble();
+        assemble_matrix();
+        assemble_rhs();
         //
 
         // boundary conditions
