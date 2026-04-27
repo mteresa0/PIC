@@ -70,7 +70,7 @@ namespace PICsimulator{
 
         void add_bc();
 
-        void solve();
+        void solve_potential();
 
         void save_output();
 
@@ -221,7 +221,7 @@ namespace PICsimulator{
     }
 
     template <int dim>
-    inline void Solver<dim>::solve() {
+    inline void Solver<dim>::solve_potential() {
         SolverControl            solver_control(1000, 1e-6 * system_rhs.l2_norm());
         SolverCG<Vector<double>> solver(solver_control);
         solver.solve(system_matrix, solution, system_rhs, PreconditionIdentity());
@@ -234,7 +234,7 @@ namespace PICsimulator{
         double mean_value = VectorTools::compute_mean_value(dof_handler, quadrature, solution, 0);
         solution.add(-mean_value);
 
-    } // end solve
+    } // end solve_potential
 
     template <int dim>
     inline void Solver<dim>::save_output() {
@@ -267,7 +267,7 @@ namespace PICsimulator{
         //
 
         // SOLVER
-        solve();
+        solve_potential();
         //
 
         // OUTPUT
