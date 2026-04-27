@@ -30,7 +30,7 @@
             "components": [
                 { "species": "N2", "comp_part": 70 },
                 { "species": "N2+", "comp_part": 10 },
-                { "species": "O2-", "comp_part": 20 }
+                { "species": "O2-", "comp_part": 10 }
             ]
         }
     ]

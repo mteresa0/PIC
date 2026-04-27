@@ -140,9 +140,6 @@ namespace PICsimulator::Species {
 
         MultiSpecies(const std::string & ms_filename, const std::string &, double );
             
-        // /// @brief default constructor
-        // MultiSpecies() : MultiSpecies({N2()}, {1000}, 300.0, 1e5) {};
-
         //// indexes functions
         /// @brief compute the combination index of two species
         /// @param i index of the first species
@@ -179,8 +176,15 @@ namespace PICsimulator::Species {
         double temperature_;
         /// total pressure
         double p_total_;
-
+        /// domain volume
         double volume;
+
+        /// @brief Verifies that the total charge of the system is zero.
+        /// @details Charge neutrality is a necessary compatibility condition 
+        /// for the Poisson equation with Neumann boundary conditions. If the 
+        /// net charge is nonzero, the right-hand side has nonzero mean and no 
+        /// solution exists.
+        void check_system_charge();
 
     public:
 
@@ -405,6 +409,8 @@ namespace PICsimulator::Species {
                 ms_name + " in file " + ms_filename);
         }
 
+        check_system_charge();
+
     }
 
     inline unsigned int MultiSpecies::combination_index(
@@ -441,6 +447,25 @@ namespace PICsimulator::Species {
             }
         }
         return;
+    }
+
+    inline void MultiSpecies::check_system_charge() {
+
+        double charge_total = 0.0;
+        double max_charge = 0.0;
+        for(unsigned int i =0; i<n_species_; ++i){
+            double c = species_vec_[i].get_charge() * 
+                    species_vec_[i].get_weight() * 
+                    n_particles_[i];
+            charge_total += c;
+            max_charge = std::max(max_charge, std::abs(c));
+        }
+
+        if(std::abs(charge_total)>1e-15*max_charge) {
+            throw std::runtime_error(
+                "System is not charge neutral. "
+                "Neumann BC requires zero net charge.");
+        }
     };
 
     inline void MultiSpecies::print() const{
