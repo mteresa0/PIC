@@ -10,8 +10,13 @@
 #ifndef DOMAIN_HPP
 #define DOMAIN_HPP
 
-#include "deal.II/base/point.h"
-#include "deal.II/base/tensor.h"
+#include <deal.II/base/point.h>
+#include <deal.II/base/tensor.h>
+#include <deal.II/dofs/dof_tools.h>
+#include <deal.II/grid/grid_tools.h>
+#include <deal.II/dofs/dof_handler.h> 
+#include <deal.II/lac/affine_constraints.h>
+#include "utilities.hpp"
 #include <cmath>
 
 namespace Domain{    
@@ -81,6 +86,14 @@ namespace Domain{
             LOGVEC("Upper vertex", upper_vertex, dim);
         }
 
+        /// @brief allows further customization on the triangulation
+        virtual void modify_triangulation(Triangulation<dim>& ) const {};
+
+        /// @brief allows to apply constraints
+        virtual void apply_constraints(
+            DoFHandler<dim>& , AffineConstraints<double>& ) const {};
+
+        /// @brief return domain volume
         double volume() const{
             double vol=upper_vertex[0] - lower_vertex[0];
             for (unsigned int i = 1; i<dim; ++i){
@@ -134,6 +147,13 @@ namespace Domain{
         void out_of_boundaries(
             location_type & loc, 
             velocity_type & vel) const override;
+
+        /// @brief adds periodicity on the triangulation
+        void modify_triangulation(Triangulation<dim>& ) const override;
+
+        /// @brief setup constraints and dof_handler for periodic boundaries
+        void apply_constraints(DoFHandler<dim>&, 
+                            AffineConstraints<double>& ) const override;
     private: 
         const char* domainType() const override {return "Periodic domain";}
     };
@@ -162,7 +182,8 @@ namespace Domain{
     }
 
     template<int dim>
-    inline void ReflectiveDomain<dim>::out_of_boundaries(location_type & location, velocity_type & velocity) const
+    inline void ReflectiveDomain<dim>::out_of_boundaries(
+        location_type & location, velocity_type & velocity) const
     {
         location_type difference(this->upper_vertex - this->lower_vertex);
         for (int i = 0; i<dim; ++i){
@@ -192,7 +213,8 @@ namespace Domain{
     }
 
     template<int dim>
-    inline void PeriodicDomain<dim>::out_of_boundaries(location_type & location, velocity_type & ) const
+    inline void PeriodicDomain<dim>::out_of_boundaries(location_type & location, 
+                                                       velocity_type & ) const
     {
         location_type difference(this->upper_vertex - this->lower_vertex);
 
@@ -203,6 +225,70 @@ namespace Domain{
             location[i] = std::fmod(location[i]-this->lower_vertex[i], difference[i]) 
                         + vertex;
         }
+        return;
+    }
+
+    template <int dim>
+    inline void PeriodicDomain<dim>::modify_triangulation(
+        Triangulation<dim>& triangulation) const
+    {
+        for (auto &cell : triangulation.active_cell_iterators())
+        for (unsigned int f = 0; f < GeometryInfo<dim>::faces_per_cell; ++f)
+        if (cell->face(f)->at_boundary()) {
+            const auto center = cell->face(f)->center();
+            if      (std::abs(center[0] - this->lower_vertex[0]) < 1e-18)
+                cell->face(f)->set_boundary_id(0); // Left
+            else if (std::abs(center[0] - this->upper_vertex[0]) < 1e-18)
+                cell->face(f)->set_boundary_id(1); // Right
+            else if (std::abs(center[1] - this->lower_vertex[1]) < 1e-18)
+                cell->face(f)->set_boundary_id(2); // Bottom
+            else if (std::abs(center[1] - this->upper_vertex[1]) < 1e-18)
+                cell->face(f)->set_boundary_id(3); // Top
+        }
+
+        std::vector<GridTools::PeriodicFacePair<
+            typename Triangulation<dim>::cell_iterator>> matched_pairs;
+
+        GridTools::collect_periodic_faces(triangulation,
+                                    0,
+                                    1,
+                                    0,
+                                    matched_pairs);
+
+        GridTools::collect_periodic_faces(triangulation,
+                                    2,
+                                    3,
+                                    1,
+                                    matched_pairs);
+
+        triangulation.add_periodicity(matched_pairs);
+
+        return;
+    }
+
+    template <int dim>
+    inline void PeriodicDomain<dim>::apply_constraints(
+        DoFHandler<dim>& dof_handler, 
+        AffineConstraints<double>& constraints) const 
+    {
+        DoFTools::make_hanging_node_constraints(dof_handler, constraints);
+
+        std::vector<GridTools::PeriodicFacePair
+        <typename DoFHandler<dim>::cell_iterator>> periodicity_vector;
+        
+        GridTools::collect_periodic_faces(dof_handler,
+                                0,
+                                1,
+                                0,
+                                periodicity_vector);
+
+        GridTools::collect_periodic_faces(dof_handler,
+                        2,
+                        3,
+                        1,
+                        periodicity_vector);
+        
+        DoFTools::make_periodicity_constraints<dim,dim>(periodicity_vector,constraints);
         return;
     }
 

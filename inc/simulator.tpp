@@ -122,7 +122,10 @@ inline void PICsimulator::Simulator<dim>::make_grid() {
         domain_data.get_lower_vertex(), 
         domain_data.get_upper_vertex());
 
-    triangulation.refine_global(4);
+    // if PERIODIC_DOMAIN collect periodic faces
+    domain_data.modify_triangulation(triangulation);
+
+    triangulation.refine_global(5);
 
     LOG("\n * Grid created * ");
     domain_data.print_data_domain();
