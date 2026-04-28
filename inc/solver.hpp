@@ -69,7 +69,8 @@ namespace PICsimulator{
             fe(1),
             quadrature_formula(fe.degree+1),
             fe_values(fe, quadrature_formula,
-                    update_values | update_gradients | update_JxW_values)
+                    update_values | update_gradients | update_JxW_values),
+            is_charged(phs.size(), false)
             {};
 
         /// @brief initializes linear algebra structures and DOF data
@@ -92,6 +93,9 @@ namespace PICsimulator{
 
         /// @brief writes solution data to output files 
         void save_output();
+
+        /// @brief computes the eletric field
+        void compute_eletric_field() const;
 
         /// @brief runs a standalone test of the solver 
         void run_solver_test();
@@ -138,20 +142,24 @@ namespace PICsimulator{
         /// @brief constraints for periodic domain
         dealii::AffineConstraints<double> constraints;
 
+        /// @brief
+        std::vector<bool> is_charged;
+
     }; // end Solver class
 
     /* DEFINITIONS */
 
     template <int dim>
     inline void Solver<dim>::setup_system() {
+
         dof_handler.distribute_dofs(fe);
 
+        // apply constraints
         constraints.clear();
-
         domain.apply_constraints(dof_handler, constraints);
-
         constraints.close();
 
+        // setup matrices 
         DynamicSparsityPattern dsp(dof_handler.n_dofs());
 
         DoFTools::make_sparsity_pattern(dof_handler, dsp, constraints);
@@ -161,7 +169,15 @@ namespace PICsimulator{
         solution.reinit(dof_handler.n_dofs());
         system_rhs.reinit(dof_handler.n_dofs());
 
-        LOGVAR("ndof", dof_handler.n_dofs());
+        // initialise is_charged
+        for(unsigned int i = 0; i<phs.size();++i){
+            if(abs(ms[i].get_charge())>1e-40){
+                is_charged[i] = true;
+            }
+        }
+
+        LOGVEC("is charged?", is_charged, phs.size());
+
     } // end setup system
 
     template <int dim>
@@ -219,11 +235,12 @@ namespace PICsimulator{
 
             // * compute rhs *
             for(unsigned int a = 0; a<ms.n_species(); ++a){
-                unsigned int n_part = phs[a].n_particles_in_cell(cell);
-                
-                double q = ms[a].get_charge()/EPS0;
 
-                if(q!=0 && n_part>0){
+                unsigned int n_part = phs[a].n_particles_in_cell(cell);
+
+                if(is_charged[a] && n_part>0){
+
+                    double f = ms[a].get_charge()/EPS0;
 
                     auto pic = phs[a].particles_in_cell(cell);
                     for(auto& it_p : pic) {
@@ -231,20 +248,9 @@ namespace PICsimulator{
                         Point<dim> ref_loc = mapping.transform_real_to_unit_cell(cell, part_loc);
 
                         for(unsigned int i : fe_values.dof_indices()){
-                            cell_rhs(i) += q* fe.shape_value(i,ref_loc);
+                            cell_rhs(i) += f* fe.shape_value(i,ref_loc);
                         }
-                    // LOGVEC("particle_loc", part_loc, 2);
-                    // LOGVEC("ref_loc", ref_loc, 2);
-                    // LOGVAR("charge", q);
-                    // LOGVAR("phi0", fe.shape_value(0,ref_loc));
-                    // LOGVAR("phi1", fe.shape_value(1,ref_loc));
-                    // LOGVAR("phi2", fe.shape_value(2,ref_loc));
-                    // LOGVAR("phi3", fe.shape_value(3,ref_loc));
-
-                    // LOGVAR("sum", fe.shape_value(0,ref_loc)+fe.shape_value(1,ref_loc)+fe.shape_value(2,ref_loc)+fe.shape_value(3,ref_loc));
-                    // LOG(" -- ");
                     }
-
                 }
             }
         
@@ -306,6 +312,12 @@ namespace PICsimulator{
         data_out.write_vtk(output);
         std::cout << "Output written to " << filename << std::endl;
     } // end save output
+
+    template <int dim>
+    inline void Solver<dim>::compute_eletric_field() const
+    {
+
+    }// compute eletric field
 
     template <int dim>
     inline void Solver<dim>::run_solver_test() {
