@@ -26,7 +26,7 @@ particle_handlers(n_species),
 domain_data(domain_data_),
 streaming_algorithm(this),
 collision_handler(this),
-field_solver(dof_handler, mapping, particle_handlers, species)
+field_solver(dof_handler, mapping, particle_handlers, species, domain_data_)
 {};
 
 template<int dim>

@@ -25,8 +25,10 @@
 #include <deal.II/lac/precondition.h>  
 #include <deal.II/numerics/data_out.h>
 #include <deal.II/dofs/dof_handler.h> 
+#include <deal.II/lac/affine_constraints.h>
 
 #include "simulator.hpp"
+#include "domain.hpp"
 
 namespace PICsimulator{
     using namespace dealii;
@@ -52,15 +54,18 @@ namespace PICsimulator{
         /// @param mapping_ mapping used for real-cell transformations
         /// @param phs_ particle handler vector
         /// @param ms_ multispecies data structure
+        /// @param domain_ domain data structure
         explicit Solver(DoFHandler<dim>& dof_h_,
                         const MappingQ<dim>& mapping_,
                         vec_ph& phs_,
-                        species_type& ms_)
+                        species_type& ms_,
+                        const Domain::DomainData<dim>& domain_)
             :
             dof_handler(dof_h_),
             mapping(mapping_),
             phs(phs_),
             ms(ms_),
+            domain(domain_),
             fe(1),
             quadrature_formula(fe.degree+1),
             fe_values(fe, quadrature_formula,
@@ -106,6 +111,9 @@ namespace PICsimulator{
         /// @brief multispecies container
         const species_type& ms;
 
+        /// @brief domain data structure
+        const Domain::DomainData<dim>& domain;
+
         /// @brief scalar Lagrange finite element used for the potential
         const dealii::FE_Q<dim> fe;
 
@@ -127,6 +135,9 @@ namespace PICsimulator{
         /// @brief right-hand side vector of the linear system 
         dealii::Vector<double> system_rhs;
 
+        /// @brief constraints for periodic domain
+        dealii::AffineConstraints<double> constraints;
+
     }; // end Solver class
 
     /* DEFINITIONS */
@@ -135,8 +146,15 @@ namespace PICsimulator{
     inline void Solver<dim>::setup_system() {
         dof_handler.distribute_dofs(fe);
 
+        constraints.clear();
+
+        domain.apply_constraints(dof_handler, constraints);
+
+        constraints.close();
+
         DynamicSparsityPattern dsp(dof_handler.n_dofs());
-        DoFTools::make_sparsity_pattern(dof_handler, dsp);
+
+        DoFTools::make_sparsity_pattern(dof_handler, dsp, constraints);
         sparsity_pattern.copy_from(dsp);
 
         system_matrix.reinit(sparsity_pattern);
@@ -181,6 +199,7 @@ namespace PICsimulator{
                                     local_dof_indices[j],
                                     cell_matrix(i, j));
         }
+        constraints.condense(system_matrix);
     } // end assemble_matrix
 
     template <int dim>
@@ -234,6 +253,7 @@ namespace PICsimulator{
             for (const unsigned int i : fe_values.dof_indices())
                 system_rhs(local_dof_indices[i]) += cell_rhs(i);
         }
+        constraints.condense(system_rhs);
     }; // end assemble rhs
 
     template <int dim>
