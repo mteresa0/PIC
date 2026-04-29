@@ -61,7 +61,7 @@ namespace PICsimulator::Species {
             return weight;
         }
 
-        /// @brief get computational weight
+        /// @brief get computational charge
         double get_charge() const {
             return charge*weight;
         }
