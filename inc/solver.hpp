@@ -70,7 +70,7 @@ namespace PICsimulator{
             quadrature_formula(fe.degree+1),
             fe_values(fe, quadrature_formula,
                     update_values | update_gradients | update_JxW_values),
-            is_charged(phs.size(), false)
+            is_charged(phs.size(), 0)
             {};
 
         /// @brief initializes linear algebra structures and DOF data
@@ -143,7 +143,7 @@ namespace PICsimulator{
         dealii::AffineConstraints<double> constraints;
 
         /// @brief
-        std::vector<bool> is_charged;
+        std::vector<char> is_charged;
 
     }; // end Solver class
 
@@ -172,11 +172,9 @@ namespace PICsimulator{
         // initialise is_charged
         for(unsigned int i = 0; i<phs.size();++i){
             if(abs(ms[i].get_charge())>1e-40){
-                is_charged[i] = true;
+                is_charged[i] = 1;
             }
         }
-
-        LOGVEC("is charged?", is_charged, phs.size());
 
     } // end setup system
 
