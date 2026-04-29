@@ -247,27 +247,61 @@ namespace Timers {
 
 namespace PICsimulator {
     using namespace dealii;
-    
+      
     /// @brief get the velocity of a particle
     /// @param particle particle pointer (particle iterator type).
     /// @return velocity of the particle. Tensor<1, dim> type.
     template<int dim>
-    Tensor<1, dim> get_velocity_from_properties(
+    static Tensor<1, dim> get_velocity_from_properties(
         const typename Particles::ParticleIterator<dim> &particle)
     {
-        return Tensor<1, dim>(particle->get_properties());
+        auto props = particle->get_properties();
+        Tensor<1, dim> v;
+        for(unsigned int d = 0; d < dim; ++d)
+            v[d] = props[d];
+        return v;
     }
 
     /// @brief set the velocity of a particle
     /// @param particle particle pointer (particle iterator type).
     /// @param velocity velocity of the particle to set.
     template<int dim>
-    void set_velocity(
+    static void set_velocity(
         typename Particles::ParticleIterator<dim> &particle, 
         const Tensor<1, dim> &velocity)
     {
-        particle->set_properties(velocity);
-        return;
+        auto props = particle->get_properties();
+        
+        for (unsigned int d = 0; d < dim; ++d)
+            props[d] = velocity[d];
+
+        particle->set_properties(props);
+        
+    }
+
+    /// @brief get the acceleration of a particle
+    template<int dim>
+    static Tensor<1, dim> get_acceleration(
+        const typename Particles::ParticleIterator<dim> &particle)
+    {
+        auto props = particle->get_properties();
+        Tensor<1, dim> v;
+        for(unsigned int d = 0; d < dim; ++d)
+            v[d] = props[d+dim];
+        return v;
+    }
+
+    /// @brief set the acceleration of a particle 
+    template<int dim>
+    static void set_acceleration(
+        typename Particles::ParticleIterator<dim> &particle, 
+        const Tensor<1, dim> &velocity)
+    {
+        auto props = particle->get_properties();
+        
+        for (unsigned int d = 0; d < dim; ++d)
+            props[d+dim] = velocity[d];
+
     }
 
     /// @brief compute L2 norm

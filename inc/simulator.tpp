@@ -191,7 +191,8 @@ inline void PICsimulator::Simulator<dim>::boundary_wall(
     // get position and velocity of the particle. initialize new velocity variable
     Point<dim> location(particle->get_location());
     Tensor<1, dim> velocity(get_velocity_from_properties(particle));
-    std::vector<double> new_velocity(dim);
+    Tensor<1, dim> acceleration(get_acceleration(particle));
+    std::vector<double> new_prop(2*dim);
 
     // run out_of_boundaries algorithm. it depends on the type of domain.
     // it will update the location and velocity given.
@@ -199,7 +200,8 @@ inline void PICsimulator::Simulator<dim>::boundary_wall(
 
     // move the new velocity in the vector form bc the particle handler wants it this way.
     for(int d = 0; d<dim; ++d){
-        new_velocity[d] = velocity[d];
+        new_prop[d] = velocity[d];
+        new_prop[d+dim] = acceleration[d];
     }
 
     // insert the lost particle 
@@ -208,7 +210,7 @@ inline void PICsimulator::Simulator<dim>::boundary_wall(
         mapping.transform_real_to_unit_cell(cell, location),
         particle->get_id(),
         cell,
-        new_velocity);   
+        new_prop);   
 }
 
 template <int dim>
@@ -226,7 +228,7 @@ inline void PICsimulator::Simulator<dim>::initialize()
 
     // initialize particles handlers
     for (unsigned int i = 0; i<n_species; ++i){
-        particle_handlers[i].initialize(triangulation, mapping, dim);
+        particle_handlers[i].initialize(triangulation, mapping, 2*dim);
         particle_handlers[i].signals.particle_lost.connect(
         [this, i]( const typename Particles::ParticleIterator<dim>    &particle,
                 const typename Triangulation<dim>::active_cell_iterator &cell) {
@@ -234,6 +236,8 @@ inline void PICsimulator::Simulator<dim>::initialize()
             }
         );
     }
+
+    LOGVAR("n properties", particle_handlers[0].n_properties_per_particle());
 
     // initialize grid and particles
     make_grid();
@@ -277,17 +281,11 @@ inline void PICsimulator::Simulator<dim>::print_data_to_files(
 
         Particles::DataOut<dim> particle_out;
 
-        particle_out.build_patches( 
-            particle_handlers[ind_sp],
-            std::vector<std::string>(dim, "velocity"),
-            std::vector<DataComponentInterpretation::DataComponentInterpretation>(
-                dim, 
-                DataComponentInterpretation::component_is_part_of_vector));
+        particle_out.build_patches(particle_handlers[ind_sp]);
 
         DataOutBase::VtkFlags output_flags;
         output_flags.time                       = dt*i;
         output_flags.cycle                      = i;
-        output_flags.physical_units["velocity"] = "m/s";
 
         particle_out.set_flags(output_flags);
 
