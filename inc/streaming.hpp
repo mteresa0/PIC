@@ -63,6 +63,13 @@ namespace PICsimulator{
         /// advance the particles according to the Verlet algorithm.
         void advance(const unsigned int);
 
+        /// @brief update location loop according to the Verlet algorithm
+        /// @details actually it updates the velocities too to the n+1/2 timestep
+        void update_location() const;
+
+        /// @brief update velocity loop according to the Verlet algorithm
+        void update_velocity() const;
+
     private:
 
         /// @brief time step
@@ -73,13 +80,6 @@ namespace PICsimulator{
 
         /// @brief vector of particle handlers
         std::vector<ph_type>& phs;
-
-        /// @brief update location loop according to the Verlet algorithm
-        /// @details actually it updates the velocities too to the n+1/2 timestep
-        void update_location() const;
-
-        /// @brief update velocity loop according to the Verlet algorithm
-        void update_velocity() const;
 
         // /// acceleration function
         // std::function<location_type()> acc_fun;

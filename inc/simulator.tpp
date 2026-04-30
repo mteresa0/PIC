@@ -39,20 +39,22 @@ inline void PICsimulator::Simulator<dim>::run() {
     // TODO: add option to not run timers
     Timers::Timer timer;
     Timers::Cumulative_Timer sorting_timer;
+    Timers::Cumulative_Timer solver_timer;
     Timers::Cumulative_Timer streaming_timer;
     Timers::Cumulative_Timer collision_timer;
      
     LOGTITLE("starting simulation");
     timer.tic();
 
-    for(unsigned int i = 0; i<NT; ++i){
+    for(unsigned int i = 1; i<NT; ++i){
         velocity_type sum_vels;
 
-        streaming_timer.tic();
-        streaming_algorithm.advance(i);
-        streaming_timer.toc();
-
         LOG("time step: " << i );
+
+        // update location
+        streaming_timer.tic();
+        streaming_algorithm.update_location();
+        streaming_timer.toc();
 
         // sort particles into cells
         sorting_timer.tic();
@@ -60,6 +62,20 @@ inline void PICsimulator::Simulator<dim>::run() {
             ph.sort_particles_into_subdomains_and_cells();
         }
         sorting_timer.toc();
+
+        // update force field and accelerations
+        solver_timer.tic();
+        field_solver.run_solver(i);
+        solver_timer.toc();
+
+        // update velocity
+        streaming_timer.tic();
+        streaming_algorithm.update_velocity();
+        streaming_timer.toc();
+
+        // streaming_timer.tic();
+        // streaming_algorithm.advance(i);
+        // streaming_timer.toc();
 
         // apply collisions
         collision_timer.tic();
@@ -104,6 +120,8 @@ inline void PICsimulator::Simulator<dim>::run() {
     std::cout << "Simulation completed in    " << sim_time    << " seconds" << std::endl; 
     std::cout << "streaming particles time:  ";
     streaming_timer.print(sim_time);
+    std::cout << "solver particles time:     ";
+    solver_timer.print(sim_time);
     std::cout << "sorting particles time:    ";
     sorting_timer.print(sim_time);
     std::cout << "collisions time:           ";
@@ -272,6 +290,8 @@ inline void PICsimulator::Simulator<dim>::initialize()
     field_solver.initialize_accelerations();
 
     initialized = true;
+
+    print_data_to_files(0);
     return;
 }
 

@@ -35,7 +35,7 @@ int main() {
     Species::MultiSpecies ms("data/multispecies.json", "nonNeutral1", vol) ;
     ms.print();
 
-    PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
+    PICsimulator::Simulator<dim> simulator(dt, 100*dt, ms, domain_data);
 
     simulator.run();
     
