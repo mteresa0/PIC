@@ -27,6 +27,7 @@
 #include <deal.II/dofs/dof_handler.h> 
 #include <deal.II/lac/affine_constraints.h>
 
+
 #include "simulator.hpp"
 #include "domain.hpp"
 
@@ -92,10 +93,10 @@ namespace PICsimulator{
         void solve_potential();
 
         /// @brief writes solution data to output files 
-        void save_output();
+        void save_output() const;
 
-        /// @brief computes the eletric field
-        void compute_eletric_field() const;
+        /// @brief computes and stores the acceleration for each particle
+        void compute_accelerations();
 
         /// @brief runs a standalone test of the solver 
         void run_solver_test();
@@ -175,7 +176,6 @@ namespace PICsimulator{
                 is_charged[i] = 1;
             }
         }
-
     } // end setup system
 
     template <int dim>
@@ -298,7 +298,7 @@ namespace PICsimulator{
     } // end solve_potential
 
     template <int dim>
-    inline void Solver<dim>::save_output() {
+    inline void Solver<dim>::save_output() const {
 
         DataOut<dim> data_out;
         data_out.attach_dof_handler(dof_handler);
@@ -312,10 +312,40 @@ namespace PICsimulator{
     } // end save output
 
     template <int dim>
-    inline void Solver<dim>::compute_eletric_field() const
+    inline void Solver<dim>::compute_accelerations()
     {
+        Vector<double> solution_values(fe.n_dofs_per_cell());
+        FEPointEvaluation<1, dim> evaluator(mapping, fe, update_gradients);
 
-    }// compute eletric field
+        for (const auto &cell : dof_handler.active_cell_iterators()){
+            cell->get_dof_values(solution, solution_values);
+            for (unsigned int s = 0; s<ms.n_species(); ++s){
+                if (is_charged[s] && phs[s].n_particles_in_cell(cell) > 0){
+                    double f = - ms[s].get_charge()/ms[s].get_mass();
+                    auto particles_in_cell(phs[s].particles_in_cell(cell));
+                
+                    std::vector<Point<dim>> particle_positions;
+                    for (const auto &particle : particles_in_cell)
+                        particle_positions.push_back(particle.get_reference_location());
+
+                    evaluator.reinit(cell, particle_positions);
+                    evaluator.evaluate(make_array_view(solution_values), EvaluationFlags::gradients);
+
+                    unsigned int index_particle = 0;
+                    for(auto particle = particles_in_cell.begin();
+                        particle!=particles_in_cell.end(); 
+                        ++particle, ++index_particle)
+                    {
+                        const Tensor<1,dim>& E = evaluator.get_gradient(index_particle);
+                        const Tensor<1,dim> acc =  f*E;
+
+                        set_acceleration(particle, acc);
+                        LOGVEC("acceleration", acc, dim);
+                    }
+                }
+            }
+        }
+    }// compute accelerations
 
     template <int dim>
     inline void Solver<dim>::run_solver_test() {
@@ -340,6 +370,8 @@ namespace PICsimulator{
         // OUTPUT
         save_output();
         //
+
+        compute_accelerations();
     };
 
 } // end PICsimulator namespace
