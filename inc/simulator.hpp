@@ -150,12 +150,6 @@ namespace PICsimulator
         /// @brief create the grid according to the domain data
         void make_grid();
 
-        //// SIMULATION FUNCTIONS
-
-        /// @brief evaluate acceleration
-        // TODO: implement this function
-        location_type evaluate_acceleration() { return location_type(); };
-
         //// PRINTING FUNCTIONS
 
         /// @brief prints at a given timestep i the properties of each particle
@@ -181,15 +175,17 @@ namespace PICsimulator
         /// how the particles behave when they leave the domain.
         const Domain::DomainData<dim> &domain_data;
 
-        /// @brief streaming algorithm object. It handles the streaming of the
-        /// particles and computes new force field.
-        Streaming<dim> streaming_algorithm;
-
         /// @brief collision object. It handles the collisions of the particles.
         Collisions<dim, HardSphere<dim>> collision_handler;
         // TODO: generalize for different kernels
 
+        /// @brief solver object. It solves the potential field and computes the
+        /// particles accelerations.
         Solver<dim> field_solver;
+
+        /// @brief streaming algorithm object. It handles the streaming of the
+        /// particles and computes new force field.
+        Streaming<dim> streaming_algorithm;
 
 #ifdef EXTRA_OUTPUTS
         CSVoutput out_kinetic_energy{"outputs/total_kinetic_energy.csv",

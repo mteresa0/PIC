@@ -24,9 +24,9 @@ mapping(1),
 dof_handler(triangulation),
 particle_handlers(n_species),
 domain_data(domain_data_),
-streaming_algorithm(this),
 collision_handler(this),
-field_solver(dof_handler, mapping, particle_handlers, species, domain_data_)
+field_solver(dof_handler, mapping, particle_handlers, species, domain_data_),
+streaming_algorithm(dt,field_solver, particle_handlers)
 {};
 
 template<int dim>
@@ -49,9 +49,7 @@ inline void PICsimulator::Simulator<dim>::run() {
         velocity_type sum_vels;
 
         streaming_timer.tic();
-        for (auto & ph : particle_handlers){
-            streaming_algorithm.advance(ph);
-        }
+        streaming_algorithm.advance();
         streaming_timer.toc();
 
         LOG("time step: " << i );

@@ -12,6 +12,7 @@
 
 #include "simulator.hpp"
 #include "utilities.hpp"
+#include "solver.hpp"
 #include "deal.II/particles/particle_handler.h"
 #include <functional>
 
@@ -34,52 +35,55 @@ namespace PICsimulator{
         // retireve type from simulator class
         using velocity_type = typename Simulator<dim>::velocity_type;
         using location_type = typename Simulator<dim>::location_type;
+        using ph_type = dealii::Particles::ParticleHandler<dim>;
 
     public:
         /// constructor
-        /// @param simulator_ simulator pointer
-        explicit Streaming(Simulator<dim> *simulator_) : 
-            sim(simulator_) ,
-            dt(simulator_->dt), 
-            acc_fun(std::bind(&Simulator<dim>::evaluate_acceleration, simulator_))
+        /// @param dt_ timestep
+        /// @param solver_ solves potential field and computes accelerations
+        explicit Streaming( const double & dt_, 
+                            Solver<dim>& solver_,
+                            std::vector<ph_type>& phs_) : 
+            dt(dt_),
+            solver(solver_),
+            phs(phs_)
         {};
 
-        /// constructor for testing
-        /// @param dt_ timestep
-        /// @param acc_fun_ acceleration function to test
-        /// the simulator pointer is not needed since this construct should 
-        /// be used only for testing the streaming algorithm.
-        explicit Streaming(const double &dt_, 
-            const std::function<Point<dim>()> &acc_fun_) : 
-            sim(nullptr) ,
-            dt(dt_),
-            acc_fun(acc_fun_)
-        {};
+        // /// constructor for testing
+        // /// @param dt_ timestep
+        // /// @param acc_fun_ acceleration function to test
+        // /// the simulator pointer is not needed since this construct should 
+        // /// be used only for testing the streaming algorithm.
+        // explicit Streaming(const double &dt_, 
+        //     const std::function<Point<dim>()> &acc_fun_) : 
+        //     dt(dt_),
+        //     acc_fun(acc_fun_)
+        // {};
 
         /// advance the particles according to the Verlet algorithm.
         /// @param ph particle handler
-        void advance(typename Particles::ParticleHandler<dim> & ph);
+        void advance();
 
     private:
-        /// simulator pointer
-        Simulator<dim> *sim;
 
-        /// time step
+        /// @brief time step
         const double dt;
 
-        /// update location loop according to the Verlet algorithm
-        /// @param ph particle handler
-        /// actually it updates the velocities too to the n+1/2 timestep
-        void update_location(
-            typename Particles::ParticleHandler<dim> & ph) const;
+        /// @brief update potential field and computes accelerations
+        Solver<dim>& solver;
 
-        /// update velocity loop according to the Verlet algorithm
-        /// @param ph particle handler
-        void update_velocity(
-            typename Particles::ParticleHandler<dim> & ph) const;
+        /// @brief vector of particle handlers
+        std::vector<ph_type>& phs;
 
-        /// acceleration function
-        std::function<location_type()> acc_fun;
+        /// @brief update location loop according to the Verlet algorithm
+        /// @details actually it updates the velocities too to the n+1/2 timestep
+        void update_location() const;
+
+        /// @brief update velocity loop according to the Verlet algorithm
+        void update_velocity() const;
+
+        // /// acceleration function
+        // std::function<location_type()> acc_fun;
     };
 
     /************
@@ -87,65 +91,63 @@ namespace PICsimulator{
     *************/
 
     template<int dim>
-    void Streaming<dim>::advance(
-        typename Particles::ParticleHandler<dim> & ph)
+    void Streaming<dim>::advance()
     {
         // update location
-        update_location(ph);
+        update_location();
 
         // // update force field
-        // sim->update_force_field();
+        // solver.run_solver();
 
         // update velocity
-        update_velocity(ph);
+        update_velocity();
     }
 
     template<int dim>
-    inline void Streaming<dim>::update_location(
-        typename Particles::ParticleHandler<dim> & ph) const
+    inline void Streaming<dim>::update_location() const
     {
         // initialize acceleration
         location_type acceleration;
 
-        // iterate over particles
-        for (auto it = ph.begin(); it!=ph.end(); ++it)
-        {
-            // get location and velocity
-            location_type location(it->get_location());
-            velocity_type velocity(get_velocity_from_properties(it));
+        for(auto& ph : phs)
+            // iterate over particles
+            for (auto it = ph.begin(); it!=ph.end(); ++it)
+            {
+                // get location and velocity
+                location_type location(it->get_location());
+                velocity_type velocity(get_velocity_from_properties(it));
 
-            // get acceleration
-            acceleration = acc_fun();
+                // get acceleration
+                acceleration = get_acceleration(it);
 
-            // update location
-            velocity += 0.5*dt*acceleration;
-            it->set_location(location + dt*velocity);
+                // update location
+                velocity += 0.5*dt*acceleration;
+                it->set_location(location + dt*velocity);
 
-            // update velocity
-            set_velocity(it, velocity);
-        }
+                // update velocity
+                set_velocity(it, velocity);
+            }
     }
 
     template<int dim>
-    inline void Streaming<dim>::update_velocity(
-        typename Particles::ParticleHandler<dim> & ph) const
+    inline void Streaming<dim>::update_velocity() const
     {
         // initialize acceleration
         location_type acceleration;
 
-        // iterate over particles
-        for (auto it = ph.begin(); it!=ph.end(); ++it)
-        {
-            // get location and velocity
-            location_type location(it->get_location());
-            velocity_type velocity(get_velocity_from_properties(it));
+        for(auto& ph : phs)
+            // iterate over particles
+            for (auto it = ph.begin(); it!=ph.end(); ++it)
+            {
+                // get velocity
+                velocity_type velocity(get_velocity_from_properties(it));
 
-            // get acceleration
-            acceleration = acc_fun();
+                // get acceleration
+                acceleration = get_acceleration(it);
 
-            // update velocity
-            set_velocity(it, velocity + 0.5*dt*acceleration);
-        }
+                // update velocity
+                set_velocity(it, velocity + 0.5*dt*acceleration);
+            }
     }
 
 }
