@@ -222,7 +222,7 @@ namespace PICsimulator{
 
     template <int dim>
     inline void Solver<dim>::assemble_matrix()  {
-        LOG("ASSEMBLE_MATRIX");
+        // LOG("ASSEMBLE_MATRIX");
         const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
 
         FullMatrix<double> cell_matrix(dofs_per_cell, dofs_per_cell);
@@ -260,7 +260,10 @@ namespace PICsimulator{
 
     template <int dim>
     inline void Solver<dim>::assemble_rhs() {
-        LOG("ASSEMBLE_RHS");
+        // LOG("ASSEMBLE_RHS");
+        system_rhs.reinit(dof_handler.n_dofs());
+        system_rhs = 0;
+
         const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
 
         Vector<double>     cell_rhs(dofs_per_cell);
@@ -329,13 +332,13 @@ namespace PICsimulator{
         SolverCG<Vector<double>> solver(solver_control);
         solver.solve(system_matrix, solution, system_rhs, PreconditionIdentity());
         
-        std::cout << solver_control.last_step()
-        << " CG iterations needed to obtain convergence." << std::endl;
+        // std::cout << solver_control.last_step()
+        // << " CG iterations needed to obtain convergence." << std::endl;
 
-        // Normalise the solution 
-        QGauss<dim> quadrature(fe.degree + 1);
-        double mean_value = VectorTools::compute_mean_value(dof_handler, quadrature, solution, 0);
-        solution.add(-mean_value);
+        // // Normalise the solution 
+        // QGauss<dim> quadrature(fe.degree + 1);
+        // double mean_value = VectorTools::compute_mean_value(dof_handler, quadrature, solution, 0);
+        // solution.add(-mean_value);
 
     } // end solve_potential
 
@@ -351,7 +354,7 @@ namespace PICsimulator{
             Utilities::int_to_string(index_time)+".vtk";
         std::ofstream     output(filename);
         data_out.write_vtk(output);
-        std::cout << "Output written to " << filename << std::endl;
+        // std::cout << "Output written to " << filename << std::endl;
     } // end save output
 
     template <int dim>
@@ -383,7 +386,7 @@ namespace PICsimulator{
                         const Tensor<1,dim> acc =  f*E;
 
                         set_acceleration(particle, acc);
-                        LOGVEC("acceleration", acc, dim);
+                        // LOGVEC("acceleration", acc, dim);
                     }
                 }
             }
