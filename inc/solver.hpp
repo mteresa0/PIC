@@ -74,32 +74,14 @@ namespace PICsimulator{
             is_charged(phs.size(), 0)
             {};
 
-        /// @brief initializes linear algebra structures and DOF data
-        void setup_system();
-
-        /// @brief assembles the stiffness matrix of the Poisson problem
-        /// @details builds the matrix associated with -Laplace(phi)
-        void assemble_matrix();
-
-        /// @brief computes and assembles the right-hand side vector 
-        /// @details evaluates the charge density contribution
-        /// integral(rho(x)/eps_0 * phi_i(x) dx) 
-        void assemble_rhs();
-
-        /// @brief applies boundary conditions to matrix and right-hand side 
-        void add_bc();
-
-        /// @brief solves the linear system for the electric potential 
-        void solve_potential();
-
-        /// @brief writes solution data to output files 
-        void save_output() const;
-
-        /// @brief computes and stores the acceleration for each particle
-        void compute_accelerations();
-
+        /// @brief initializes solver
+        void initialize();
+        
         /// @brief runs a standalone test of the solver 
-        void run_solver_test();
+        void initialize_accelerations();
+
+        /// @brief solves potential field and updates accelerations
+        void run_solver(const unsigned int);
 
     private:
         //////////// members
@@ -146,9 +128,69 @@ namespace PICsimulator{
         /// @brief
         std::vector<char> is_charged;
 
+        //////// mthods
+
+        /// @brief initializes linear algebra structures and DOF data
+        void setup_system();
+
+        /// @brief assembles the stiffness matrix of the Poisson problem
+        /// @details builds the matrix associated with -Laplace(phi)
+        void assemble_matrix();
+
+        /// @brief computes and assembles the right-hand side vector 
+        /// @details evaluates the charge density contribution
+        /// integral(rho(x)/eps_0 * phi_i(x) dx) 
+        void assemble_rhs();
+
+        /// @brief applies boundary conditions to matrix and right-hand side 
+        void add_bc();
+
+        /// @brief solves the linear system for the electric potential 
+        void solve_potential();
+
+        /// @brief writes solution data to output files 
+        void save_output(const unsigned int i=0) const;
+
+        /// @brief computes and stores the acceleration for each particle
+        void compute_accelerations();
+
+
     }; // end Solver class
 
     /* DEFINITIONS */
+
+    template <int dim>
+    inline void Solver<dim>::initialize() {
+        // setup system
+        setup_system();
+        
+        // assemble system
+        assemble_matrix();
+        assemble_rhs();
+        
+        // boundary conditions
+        add_bc();
+    }
+
+    template <int dim>
+    inline void Solver<dim>::initialize_accelerations() {
+        // SOLVER
+        solve_potential();
+        
+        // OUTPUT
+        save_output();
+        
+        // COMPUTE ACCELERATIONS
+        compute_accelerations();
+    }
+
+    template <int dim>
+    inline void Solver<dim>::run_solver(const unsigned int index_timestep) {
+        assemble_rhs();
+        solve_potential();
+        save_output(index_timestep);
+        compute_accelerations();
+    };
 
     template <int dim>
     inline void Solver<dim>::setup_system() {
@@ -298,14 +340,15 @@ namespace PICsimulator{
     } // end solve_potential
 
     template <int dim>
-    inline void Solver<dim>::save_output() const {
+    inline void Solver<dim>::save_output(const unsigned int index_time) const {
 
         DataOut<dim> data_out;
         data_out.attach_dof_handler(dof_handler);
         data_out.add_data_vector(solution, "solution");
         data_out.build_patches();
         
-        const std::string filename = "outputs/solution.vtk";
+        const std::string filename = "outputs/phi_"+
+            Utilities::int_to_string(index_time)+".vtk";
         std::ofstream     output(filename);
         data_out.write_vtk(output);
         std::cout << "Output written to " << filename << std::endl;
@@ -346,33 +389,6 @@ namespace PICsimulator{
             }
         }
     }// compute accelerations
-
-    template <int dim>
-    inline void Solver<dim>::run_solver_test() {
-
-        // setup system
-        setup_system();
-        //
-
-        // assemble system
-        assemble_matrix();
-        assemble_rhs();
-        //
-
-        // boundary conditions
-        add_bc();
-        //
-
-        // SOLVER
-        solve_potential();
-        //
-
-        // OUTPUT
-        save_output();
-        //
-
-        compute_accelerations();
-    };
 
 } // end PICsimulator namespace
 

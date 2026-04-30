@@ -76,7 +76,8 @@ namespace PICsimulator
         /////////// test
         void solve_test(){
             initialize();
-            field_solver.run_solver_test();
+            field_solver.initialize();
+            field_solver.initialize_accelerations();
 
             print_data_to_files(0);
         };
