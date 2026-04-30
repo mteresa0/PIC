@@ -22,7 +22,7 @@ int main() {
 
 
     Point<dim> lower_vertex(0, 0);
-    Point<dim> upper_vertex(5e-10, 5e-10);
+    Point<dim> upper_vertex(5e-7, 5e-7);
     Domain::PeriodicDomain<dim> domain_data(lower_vertex, upper_vertex);
 
     double vol = domain_data.volume();
@@ -37,7 +37,7 @@ int main() {
 
     PICsimulator::Simulator<dim> simulator(dt, 5*dt, ms, domain_data);
 
-    simulator.solve_test();
+    simulator.run();
     
     
 }

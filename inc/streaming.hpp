@@ -61,8 +61,7 @@ namespace PICsimulator{
         // {};
 
         /// advance the particles according to the Verlet algorithm.
-        /// @param ph particle handler
-        void advance();
+        void advance(const unsigned int);
 
     private:
 
@@ -91,13 +90,13 @@ namespace PICsimulator{
     *************/
 
     template<int dim>
-    void Streaming<dim>::advance()
+    void Streaming<dim>::advance(const unsigned int index_timestep)
     {
         // update location
         update_location();
 
-        // // update force field
-        // solver.run_solver();
+        // update force field and accelerations
+        solver.run_solver(index_timestep);
 
         // update velocity
         update_velocity();

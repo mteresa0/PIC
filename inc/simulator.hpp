@@ -73,15 +73,15 @@ namespace PICsimulator
         /// This is the method in which the simulatotion loop is defined.
         void run();
 
-        /////////// test
-        void solve_test(){
-            initialize();
-            field_solver.initialize();
-            field_solver.initialize_accelerations();
+        // /////////// test
+        // void solve_test(){
+        //     initialize();
+        //     field_solver.initialize();
+        //     field_solver.initialize_accelerations();
 
-            print_data_to_files(0);
-        };
-        ///////////
+        //     print_data_to_files(0);
+        // };
+        // ///////////
 
         /// @brief Destructor of the Simulator class
         ~Simulator() = default;

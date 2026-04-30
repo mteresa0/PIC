@@ -49,7 +49,7 @@ inline void PICsimulator::Simulator<dim>::run() {
         velocity_type sum_vels;
 
         streaming_timer.tic();
-        streaming_algorithm.advance();
+        streaming_algorithm.advance(i);
         streaming_timer.toc();
 
         LOG("time step: " << i );
@@ -266,6 +266,10 @@ inline void PICsimulator::Simulator<dim>::initialize()
 
     // initialize collisions
     collision_handler.initialize();
+
+    // initialize solver
+    field_solver.initialize();
+    field_solver.initialize_accelerations();
 
     initialized = true;
     return;
