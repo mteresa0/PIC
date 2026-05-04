@@ -351,7 +351,7 @@ namespace PICsimulator{
         data_out.build_patches();
         
         const std::string filename = "outputs/phi_"+
-            Utilities::int_to_string(index_time)+".vtk";
+            Utilities::int_to_string(index_time, 5)+".vtk";
         std::ofstream     output(filename);
         data_out.write_vtk(output);
         // std::cout << "Output written to " << filename << std::endl;
