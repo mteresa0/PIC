@@ -201,7 +201,7 @@ inline void PICsimulator::Simulator<dim>::set_initial_velocity()
 template <int dim>
 inline void PICsimulator::Simulator<dim>::boundary_wall( 
     const typename Particles::ParticleIterator<dim>         &particle,
-    const typename Triangulation<dim>::active_cell_iterator &cell,
+    const typename Triangulation<dim>::active_cell_iterator &,
     const unsigned int & index_species) 
 {
     // get position and velocity of the particle. initialize new velocity variable
@@ -220,13 +220,16 @@ inline void PICsimulator::Simulator<dim>::boundary_wall(
         new_prop[d+dim] = acceleration[d];
     }
 
+    auto [new_cell, ref_loc] = GridTools::find_active_cell_around_point(
+        mapping, dof_handler, location);
+
     // insert the lost particle 
     particle_handlers[index_species].insert_particle(
         location,
-        mapping.transform_real_to_unit_cell(cell, location),
+        ref_loc,
         particle->get_id(),
-        cell,
-        new_prop);   
+        new_cell,
+        new_prop);    
 }
 
 template <int dim>
