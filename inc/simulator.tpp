@@ -11,6 +11,21 @@
 #include "simulator.hpp"
 
 template<int dim>
+inline PICsimulator::Simulator<dim>::Simulator(Config<dim> & c, const Domain::DomainData<dim> &domain_data_):
+dt(c.dt),
+T(dt*c.n_timesteps),
+species(c.multispecies_file, c.multispecies_name, domain_data_.volume()),
+n_species(species.n_species()),
+mapping(1), 
+dof_handler(triangulation),
+particle_handlers(n_species),
+domain_data(domain_data_),
+collision_handler(this),
+field_solver(dof_handler, mapping, particle_handlers, species, domain_data_),
+streaming_algorithm(dt,field_solver, particle_handlers)
+{};
+
+template<int dim>
 inline PICsimulator::Simulator<dim>::Simulator(
     const double &dt_,
     const double &T_,

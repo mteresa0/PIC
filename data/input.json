@@ -1,0 +1,15 @@
+{
+    "dim":2,
+    "dt":1e-13,
+    "n_timesteps": 10,
+    "lower_vertex": [
+        0,
+        0
+    ],
+    "upper_vertex": [
+        5e-7,
+        5e-7
+    ],
+    "multispecies_file": "data/multispecies.json",
+    "multispecies_name": "nonNeutral1"
+}

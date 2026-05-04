@@ -62,6 +62,16 @@ namespace PICsimulator
         /// @param T_ total simulation time
         /// @param species_ species
         /// @param domain_data_ domain data object
+        explicit Simulator(
+            Config<dim> & config,
+            const Domain::DomainData<dim> &domain_data_ =
+                Domain::ReflectiveDomain<dim>());
+
+        /// @brief Constructor of the Simulator class
+        /// @param dt_ time step
+        /// @param T_ total simulation time
+        /// @param species_ species
+        /// @param domain_data_ domain data object
         Simulator(
             const double &dt_ = 1e-8,
             const double &T_ = 1e-5,

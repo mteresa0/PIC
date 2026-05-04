@@ -27,9 +27,10 @@
 #include <deal.II/dofs/dof_handler.h> 
 #include <deal.II/lac/affine_constraints.h>
 
-
+#include "species.hpp"
 #include "simulator.hpp"
 #include "domain.hpp"
+#include "config.hpp"
 
 namespace PICsimulator{
     using namespace dealii;
