@@ -17,6 +17,7 @@ struct Config {
     dealii::Point<dim> upper_vertex;
     std::string multispecies_file;
     std::string multispecies_name;
+    unsigned int grid_refinement;
 
     Config();
 };
@@ -49,6 +50,7 @@ inline Config<dim>::Config()
     multispecies_file = j.at("multispecies_file").get<std::string>();
     multispecies_name = j.at("multispecies_name").get<std::string>();
 
+    grid_refinement = j.at("grid_refinement").get<unsigned int>();
 }
 
 #endif // CONFIG

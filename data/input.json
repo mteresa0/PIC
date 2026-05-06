@@ -11,5 +11,6 @@
         5e-7
     ],
     "multispecies_file": "data/multispecies.json",
-    "multispecies_name": "nonNeutral1"
+    "multispecies_name": "nonNeutral1",
+    "grid_refinement": 4
 }

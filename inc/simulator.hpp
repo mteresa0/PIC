@@ -150,6 +150,9 @@ namespace PICsimulator
         /// @brief cell volume
         double cell_volume;
 
+        /// @brief
+        double grid_refinement;
+
         // /// @brief number density (# particles / tot. volume)
         // double number_density;
 

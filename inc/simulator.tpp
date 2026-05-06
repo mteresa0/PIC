@@ -16,6 +16,7 @@ dt(c.dt),
 T(dt*c.n_timesteps),
 species(c.multispecies_file, c.multispecies_name, domain_data_.volume()),
 n_species(species.n_species()),
+grid_refinement(c.grid_refinement),
 mapping(1), 
 dof_handler(triangulation),
 particle_handlers(n_species),
@@ -35,6 +36,7 @@ dt(dt_),
 T(T_),
 species(std::move(species_)),
 n_species(species.n_species()),
+grid_refinement(4),
 mapping(1), 
 dof_handler(triangulation),
 particle_handlers(n_species),
@@ -156,7 +158,7 @@ inline void PICsimulator::Simulator<dim>::make_grid() {
     // if PERIODIC_DOMAIN collect periodic faces
     domain_data.modify_triangulation(triangulation);
 
-    triangulation.refine_global(5);
+    triangulation.refine_global(grid_refinement);
 
     LOG("\n * Grid created * ");
     domain_data.print_data_domain();
