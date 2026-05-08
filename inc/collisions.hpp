@@ -70,7 +70,7 @@ namespace PICsimulator {
             double chi = std::acos(Random::rnd_uniform(-1., 1));
             if constexpr (dim==2){
                 double R = Random::rnd_uniform();
-                if (R>1/2)
+                if (R>0.5)
                     chi *=-1;
             }
             return chi;
