@@ -14,31 +14,8 @@ int main() {
     constexpr int dim = 2;
     Config<dim> c;
 
-    // // std::vector<double> dts = {0.1, 0.05, 0.025, 0.0125, 0.00625};
-    // // double total_time = 5;
-
-    // // PICsimulator::TestSimulators::PeriodicMotion<dim> motion;
-
-
-    // // PICsimulator::TestSimulators::convergence_test<dim>(
-    // //     motion, dts, total_time);
-
-
-    // Point<dim> lower_vertex(0, 0);
-    // Point<dim> upper_vertex(5e-7, 5e-7);
     Domain::ReflectiveDomain<dim> domain_data(c.lower_vertex, c.upper_vertex);
 
-    // double vol = domain_data.volume();
-
-    // // std::vector<Species::ChemicalSpecies> species({Species::N2(), Species::O2()});
-
-    // // Species::MultiSpecies ms(species, {100, 100});
-
-    // double dt = 1e-13;    
-    // Species::MultiSpecies ms("data/multispecies.json", "nonNeutral1", vol) ;
-    // ms.print();
-
-    // PICsimulator::Simulator<dim> simulator(dt, 1000*dt, ms, domain_data);
     PICsimulator::Simulator<dim> simulator(c, domain_data);
 
     simulator.run();

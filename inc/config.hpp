@@ -5,6 +5,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <stdexcept>
 #include <nlohmann/json.hpp>
 #include <deal.II/base/point.h>
 using json = nlohmann::json;
@@ -35,7 +36,14 @@ inline Config<dim>::Config()
     json j;
     file >> j;
 
-    // dim = j.at("dim").get<int>();
+    // check if the input dimention in the same give as templare param
+    int dim_from_json = j.at("dim").get<int>();
+    if(dim!=dim_from_json){
+        throw std::runtime_error(
+            "template paramenter dimention and config dimension are different");
+    }
+
+    // continue 
     dt = j.at("dt").get<double>();
     n_timesteps = j.at("n_timesteps").get<int>();
 
