@@ -109,7 +109,15 @@ inline void PICsimulator::Simulator<dim>::run() {
                 for (auto it = ph.begin(); it!=ph.end(); ++it)
                 {
                     // Point<dim> position(it->get_location());
-                    Tensor<1, dim> velocity(get_velocity_from_properties(it));
+                    velocity_type velocity(get_velocity_from_properties(it));
+
+                    // save velocity components
+                    if constexpr (dim==2)
+                        out_velocities.write_row(
+                        {i*dt, it_ph, velocity[0], velocity[1]});
+                    else
+                        out_velocities.write_row(
+                        {i*dt, it_ph, velocity[0], velocity[1], velocity[2]});
                     
                     // save kinetic energy per particle
                     double ke = species[it_ph].get_mass() * velocity.norm();
@@ -123,6 +131,8 @@ inline void PICsimulator::Simulator<dim>::run() {
             }
         }
         out_kinetic_energy.write_row({i*dt, total_kinetic_energy, sum_particles_kinetic_energy});
+
+
 
         // print data to files
         print_data_to_files(i);

@@ -201,10 +201,13 @@ namespace PICsimulator
         /// particles and computes new force field.
         Streaming<dim> streaming_algorithm;
 
-#ifdef EXTRA_OUTPUTS
+        #ifdef EXTRA_OUTPUTS
         CSVoutput out_kinetic_energy{"outputs/total_kinetic_energy.csv",
-                                     {"time", "total_kinetic_energy", "sum_particles_kinetic_energy"}};
-#endif
+            {"time", "total_kinetic_energy", "sum_particles_kinetic_energy"}};
+        CSVoutput out_velocities{"outputs/velocities.csv", 
+        (dim == 2) ? std::vector<std::string>{"time", "species index", "vx", "vy"} 
+                   : std::vector<std::string>{"time", "species index", "vx", "vy", "vz"}};
+        #endif
 
         /// @brief insert particles (dummy, it will be replaced)
         void insert_particles_dummy();
