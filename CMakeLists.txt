@@ -58,3 +58,8 @@ deal_ii_invoke_autopilot()
 add_custom_target(clean_outputs
     COMMAND ${CMAKE_COMMAND} -E rm -f ${CLEAN_UP_FILES}
 )
+
+add_custom_target(postprocess
+    COMMAND python3 postprocessing.py all
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/post
+)
