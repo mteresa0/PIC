@@ -64,10 +64,18 @@ namespace PICsimulator {
         /// @brief Compute deflection angle chi.
         /// @details the cosine is randomly picked for a uniform distribution 
         /// from -1 to 1 and then the angle is computed through the acos operator.
-        double get_chi(/*const Point<dim> & relative velocity*/) const override{
-            return std::acos(Random::rnd_uniform(-1., 1));
+        /// See Nonequilibrium Gas Dynamics and Molecular Simulation section C.1.1
+        double get_chi(/*const Point<dim> & relative velocity*/) const override
+        {
+            double chi = std::acos(Random::rnd_uniform(-1., 1));
+            if constexpr (dim==2){
+                double R = Random::rnd_uniform();
+                if (R>1/2)
+                    chi *=-1;
+            }
+            return chi;
         }
-
+        
         /// @brief Compute the deflection angle epsilon
         /// @details The angle is randomly pick for an uniform distribution 
         /// between -PI and PI.
