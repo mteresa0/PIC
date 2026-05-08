@@ -64,7 +64,7 @@ namespace PICsimulator {
         /// @brief Compute deflection angle chi.
         /// @details the cosine is randomly picked for a uniform distribution 
         /// from -1 to 1 and then the angle is computed through the acos operator.
-        /// See Nonequilibrium Gas Dynamics and Molecular Simulation section C.1.1
+        /// See Nonequilibrium Gas Dynamics and Molecular Simulation, section C.1.1
         double get_chi(/*const Point<dim> & relative velocity*/) const override
         {
             double chi = std::acos(Random::rnd_uniform(-1., 1));
@@ -167,14 +167,17 @@ namespace PICsimulator {
             double);
 
         /// compute post-collisional relative velocity
-        Tensor<1,dim> compute_post_collisional_velocity(const velocity_type & cr) const;
+        Tensor<1,dim> compute_post_collisional_velocity(
+            const velocity_type & cr);
 
         /// compute and update new velocities of the particles
         void update_velocities(
             particle_iterator & , 
             particle_iterator & ,
             const velocity_type & ,
-            const velocity_type & );
+            const velocity_type & ,
+            const double & ,
+            const double & );
 
     }; // end class Collisions
 
@@ -436,7 +439,7 @@ namespace PICsimulator {
                 compute_post_collisional_velocity(cr);
 
             // compute and update new velocities
-            update_velocities(it_i, it_j, cm, cr_post);
+            update_velocities(it_i, it_j, cm, cr_post, mass1, mass2);
 
             if (sigma * cr_norm > sigma_cr_max)
             {
@@ -452,7 +455,7 @@ namespace PICsimulator {
 
     template <int dim, class T>
     inline Tensor<1, dim> Collisions<dim, T>::compute_post_collisional_velocity(
-        const velocity_type & cr) const
+        const velocity_type & cr) 
     {
         // initialize post-collisional relative velocity
         velocity_type cr_;
@@ -483,11 +486,13 @@ namespace PICsimulator {
         particle_iterator & it_i, 
         particle_iterator & it_j,
         const velocity_type & cm,
-        const velocity_type & cr_)
+        const velocity_type & cr_,
+        const double & mi,
+        const double & mj)
     {
         // compute the new velocities
-        velocity_type v_i_new(cm + cr_ / 2.0);
-        velocity_type v_j_new(cm - cr_ / 2.0);
+        velocity_type v_i_new(cm + (mj/(mi+mj))*cr_);
+        velocity_type v_j_new(cm - (mi/(mi+mj))*cr_);
 
         // set the new velocities
         set_velocity(it_i, v_i_new);
