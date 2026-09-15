@@ -237,13 +237,19 @@ namespace Domain{
         if (cell->face(f)->at_boundary()) {
             const auto center = cell->face(f)->center();
             if      (std::abs(center[0] - this->lower_vertex[0]) < 1e-18)
-                cell->face(f)->set_boundary_id(0); // Left
+                cell->face(f)->set_boundary_id(0); // left
             else if (std::abs(center[0] - this->upper_vertex[0]) < 1e-18)
-                cell->face(f)->set_boundary_id(1); // Right
+                cell->face(f)->set_boundary_id(1); // right
             else if (std::abs(center[1] - this->lower_vertex[1]) < 1e-18)
-                cell->face(f)->set_boundary_id(2); // Bottom
+                cell->face(f)->set_boundary_id(2); // bottom
             else if (std::abs(center[1] - this->upper_vertex[1]) < 1e-18)
-                cell->face(f)->set_boundary_id(3); // Top
+                cell->face(f)->set_boundary_id(3); // up
+            else if constexpr (dim > 2) {
+                if      (std::abs(center[2] - this->lower_vertex[2]) < 1e-18)
+                    cell->face(f)->set_boundary_id(4); // 
+                else if (std::abs(center[2] - this->upper_vertex[2]) < 1e-18)
+                    cell->face(f)->set_boundary_id(5); //
+            }
         }
 
         std::vector<GridTools::PeriodicFacePair<
@@ -260,6 +266,14 @@ namespace Domain{
                                     3,
                                     1,
                                     matched_pairs);
+
+        if constexpr (dim > 2) {
+            GridTools::collect_periodic_faces(triangulation,
+                                        4,
+                                        5,
+                                        2,
+                                        matched_pairs);
+        }
 
         triangulation.add_periodicity(matched_pairs);
 
