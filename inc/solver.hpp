@@ -262,38 +262,68 @@ namespace PICsimulator{
     template <int dim>
     inline void Solver<dim>::assemble_rhs() {
         // LOG("ASSEMBLE_RHS");
+
+        // reinitialize the rhs system
         system_rhs.reinit(dof_handler.n_dofs());
         system_rhs = 0;
 
         const unsigned int dofs_per_cell = fe.n_dofs_per_cell();
-
-        Vector<double>     cell_rhs(dofs_per_cell);
-        
+        Vector<double> cell_rhs(dofs_per_cell);        
         std::vector<types::global_dof_index> local_dof_indices(dofs_per_cell);
-            
+        
+        // calculate total charge in the domain
+        double total_charge = 0.0;
+        for (unsigned int idx_species = 0; idx_species < ms.n_species(); ++idx_species) {
+            if (is_charged[idx_species]) {
+                total_charge += ms[idx_species].get_charge() * phs[idx_species].n_global_particles();
+            }
+        }
+
+        // compute background density offset: rho_bg = total_charge / domain_Volume
+        const double domain_volume = domain.volume(); 
+        const double bg_density = total_charge / domain_volume;
+             
+        // iteration on cells
         for (const auto &cell : dof_handler.active_cell_iterators())
         {
+            // reinitialize fe values for the given cell
             fe_values.reinit(cell);
-
             cell_rhs    = 0;
 
             // * compute rhs *
-            for(unsigned int a = 0; a<ms.n_species(); ++a){
+            for(unsigned int idx_species = 0; idx_species<ms.n_species(); ++idx_species){
 
-                unsigned int n_part = phs[a].n_particles_in_cell(cell);
+                unsigned int n_part = phs[idx_species].n_particles_in_cell(cell);
 
-                if(is_charged[a] && n_part>0){
+                // skip if the species has null charge or there are not any particles in the cell
+                if(is_charged[idx_species] && n_part>0){
 
-                    double f = ms[a].get_charge()/EPS0;
+                    double f = ms[idx_species].get_charge()/EPS0;
 
-                    auto pic = phs[a].particles_in_cell(cell);
+                    auto pic = phs[idx_species].particles_in_cell(cell);
                     for(auto& it_p : pic) {
-                        Point<dim> part_loc(it_p.get_location());
-                        Point<dim> ref_loc = mapping.transform_real_to_unit_cell(cell, part_loc);
+                        // Point<dim> particle_loc(it_p.get_location());
+                        // Point<dim> particle_ref_loc = 
+                        //     mapping.transform_real_to_unit_cell(cell, particle_loc);
+
+                        Point<dim> particle_ref_loc = 
+                            mapping.transform_real_to_unit_cell(cell, it_p.get_location());
 
                         for(unsigned int i : fe_values.dof_indices()){
-                            cell_rhs(i) += f* fe.shape_value(i,ref_loc);
+                            // since the charge is punctual the integral over 
+                            // the cell is computed as charge/eps0*shape_fun(reference_location)
+                            cell_rhs(i) += f * fe.shape_value(i,particle_ref_loc);
                         }
+                    }
+                }
+            }
+
+            // continuous background subtraction for charge neutrality
+            if (std::abs(bg_density) > 1e-40) {
+                const double bg_factor = bg_density / EPS0;
+                for (const unsigned int q_index : fe_values.quadrature_point_indices()) {
+                    for (unsigned int i : fe_values.dof_indices()) {
+                        cell_rhs(i) -= bg_factor * fe_values.shape_value(i, q_index) * fe_values.JxW(q_index);
                     }
                 }
             }
@@ -332,15 +362,6 @@ namespace PICsimulator{
         SolverControl            solver_control(1000, 1e-6 * system_rhs.l2_norm());
         SolverCG<Vector<double>> solver(solver_control);
         solver.solve(system_matrix, solution, system_rhs, PreconditionIdentity());
-        
-        // std::cout << solver_control.last_step()
-        // << " CG iterations needed to obtain convergence." << std::endl;
-
-        // // Normalise the solution 
-        // QGauss<dim> quadrature(fe.degree + 1);
-        // double mean_value = VectorTools::compute_mean_value(dof_handler, quadrature, solution, 0);
-        // solution.add(-mean_value);
-
     } // end solve_potential
 
     template <int dim>

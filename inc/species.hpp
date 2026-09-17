@@ -182,8 +182,8 @@ namespace PICsimulator::Species {
         /// @brief Verifies that the total charge of the system is zero.
         /// @details Charge neutrality is a necessary compatibility condition 
         /// for the Poisson equation with Neumann boundary conditions. If the 
-        /// net charge is nonzero, the right-hand side has nonzero mean and no 
-        /// solution exists.
+        /// net charge is nonzero, the total net charge will be subtracted from 
+        /// the rhs in the solver's rhs_assemble method.
         void check_system_charge();
 
     public:
@@ -462,9 +462,8 @@ namespace PICsimulator::Species {
         }
 
         if(std::abs(charge_total)>1e-15*max_charge) {
-            throw std::runtime_error(
-                "System is not charge neutral. "
-                "Neumann BC requires zero net charge.");
+            std::cerr << "\nWARNING: System is not charge neutral. "
+                  << "The total net charge will be subtracted from the RHS.\n\n";
         }
     };
 
