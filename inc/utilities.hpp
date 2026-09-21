@@ -247,7 +247,17 @@ namespace Timers {
 
 namespace PICsimulator {
     using namespace dealii;
-      
+    
+    template <int dim>
+    inline dealii::Point<dim> vectorToPoint(const std::vector<double> &v)
+    {
+        dealii::Point<dim> p;
+        for (unsigned int d = 0; d < dim; ++d)
+            p[d] = v[d];
+
+        return p;
+    }
+
     /// @brief get the velocity of a particle
     /// @param particle particle pointer (particle iterator type).
     /// @return velocity of the particle. Tensor<1, dim> type.

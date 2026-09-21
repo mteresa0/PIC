@@ -6,20 +6,50 @@
 
 // #include "test_simulators.hpp"
 #include "deal.II/base/tensor.h"
+#include <vector>
 
-int main() {
+#include <iostream>
+
+int main(int argc, char *argv[]) {
 
     using namespace PICsimulator;
 
-    constexpr int dim = 2;
-    Config<dim> c;
+    std::string config_file;
 
-    Domain::ReflectiveDomain<dim> domain_data(c.lower_vertex, c.upper_vertex);
+    if (argc>1){
+        config_file = argv[1];
+    } else {
+        config_file = "data/input.json";
+    }
 
-    PICsimulator::Simulator<dim> simulator(c, domain_data);
+    Config c(config_file);
 
-    simulator.run();
-    
+    if (c.dim==2) {
+
+        constexpr int dim = 2;
+
+        Domain::PeriodicDomain<dim> domain_data(c.lower_vertex, c.upper_vertex);
+
+        PICsimulator::Simulator<dim> simulator(c, domain_data);
+
+        simulator.run();
+    } else {
+        constexpr int dim = 3;
+
+        Domain::PeriodicDomain<dim> domain_data(c.lower_vertex, c.upper_vertex);
+
+        PICsimulator::Simulator<dim> simulator(c, domain_data);
+
+        simulator.run();
+    }
+
+
+
+    // std::vector<double> dts({1e-1, 1e-2, 1e-3});
+    // TestSimulators::PeriodicMotion<3> motion;
+
+    // TestSimulators::convergence_test(motion, dts, 1.0);
+   
     
 }
 

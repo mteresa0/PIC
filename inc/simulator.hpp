@@ -63,7 +63,7 @@ namespace PICsimulator
         /// @param species_ species
         /// @param domain_data_ domain data object
         explicit Simulator(
-            Config<dim> & config,
+            Config & config,
             const Domain::DomainData<dim> &domain_data_ =
                 Domain::ReflectiveDomain<dim>());
 

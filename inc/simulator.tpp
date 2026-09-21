@@ -11,7 +11,7 @@
 #include "simulator.hpp"
 
 template<int dim>
-inline PICsimulator::Simulator<dim>::Simulator(Config<dim> & c, const Domain::DomainData<dim> &domain_data_):
+inline PICsimulator::Simulator<dim>::Simulator(Config & c, const Domain::DomainData<dim> &domain_data_):
 dt(c.dt),
 T(dt*c.n_timesteps),
 species(c.multispecies_file, c.multispecies_name, domain_data_.volume()),

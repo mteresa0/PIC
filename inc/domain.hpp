@@ -18,6 +18,7 @@
 #include <deal.II/lac/affine_constraints.h>
 #include "utilities.hpp"
 #include <cmath>
+#include <vector>
 
 namespace Domain{    
     using namespace dealii;
@@ -44,18 +45,17 @@ namespace Domain{
         static_assert(dim==2||dim==3, "Only 2D and 3D domain are allowed");
 
     public:
-
         using location_type = Point<dim>;
         using velocity_type = Tensor<1,dim>;
 
         /// @brief constructor
-        /// @param lower_v_ 
-        /// @param upper_v_ 
+        /// @param lower_v_ lower vertex
+        /// @param upper_v_ upper vertex
         DomainData(
             const location_type & lower_v_ = UnitSquare::get_lower_vertex<dim>(), 
             const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()):  
             lower_vertex(lower_v_), upper_vertex(upper_v_) {};
-        
+
         /// descructor
         virtual ~DomainData() = default;
 
@@ -119,15 +119,34 @@ namespace Domain{
         using location_type = typename DomainData<dim>::location_type;
         using velocity_type = typename DomainData<dim>::velocity_type;
 
+        /// @brief constructor from dealii points
+        /// @param lower_v_ dealii::Point<dim> lower vertex
+        /// @param upper_v_ dealii::Point<dim> upper vertex
         ReflectiveDomain(
             const location_type & lower_v_ = UnitSquare::get_lower_vertex<dim>(), 
             const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()): 
             DomainData<dim>(lower_v_, upper_v_) {};
 
+        /// @brief constructor from std::vectors
+        /// @param vec_lv vector<double> lower vertex
+        /// @param vec_uv vector<double> upper vertex
+        ReflectiveDomain(
+            const std::vector<double> & vec_lv, 
+            const std::vector<double> & vec_uv
+        ) : ReflectiveDomain(
+            PICsimulator::vectorToPoint<dim>(vec_lv), 
+            PICsimulator::vectorToPoint<dim>(vec_uv)
+        ) {};
+
+        /// @brief this method is called when a particle is out of the domain.
+        /// According to the domain it reinsertes the particle.
+        /// @param loc particle lost location
+        /// @param vel particle lost velocity
         void out_of_boundaries(
             location_type & loc, 
             velocity_type & vel) const override;
     private:
+        /// @brief get domain type string
         const char* domainType() const override {return "Reflective walls domain";};
     };
 
@@ -139,11 +158,29 @@ namespace Domain{
         using location_type = typename DomainData<dim>::location_type;
         using velocity_type = typename DomainData<dim>::velocity_type;
 
-        PeriodicDomain(
+        /// @brief constructor from dealii points
+        /// @param lower_v_ dealii::Point<dim> lower vertex
+        /// @param upper_v_ dealii::Point<dim> upper vertex
+        explicit PeriodicDomain(
             const location_type & lower_v_ = UnitSquare::get_lower_vertex<dim>(), 
             const location_type & upper_v_ = UnitSquare::get_upper_vertex<dim>()): 
             DomainData<dim>(lower_v_, upper_v_) {};
+        
+        /// @brief constructor from std::vectors
+        /// @param vec_lv vector<double> lower vertex
+        /// @param vec_uv vector<double> upper vertex
+        explicit PeriodicDomain(
+            const std::vector<double> & vec_lv, 
+            const std::vector<double> & vec_uv
+        ) : PeriodicDomain(
+            PICsimulator::vectorToPoint<dim>(vec_lv), 
+            PICsimulator::vectorToPoint<dim>(vec_uv)
+        ) {};
 
+        /// @brief this method is called when a particle is out of the domain.
+        /// According to the domain it reinsertes the particle.
+        /// @param loc particle lost location
+        /// @param vel particle lost velocity
         void out_of_boundaries(
             location_type & loc, 
             velocity_type & vel) const override;
@@ -155,6 +192,7 @@ namespace Domain{
         void apply_constraints(DoFHandler<dim>&, 
                             AffineConstraints<double>& ) const override;
     private: 
+        /// @brief get domain type string
         const char* domainType() const override {return "Periodic domain";}
     };
 
