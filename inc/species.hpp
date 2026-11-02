@@ -455,7 +455,6 @@ namespace PICsimulator::Species {
         double max_charge = 0.0;
         for(unsigned int i =0; i<n_species_; ++i){
             double c = species_vec_[i].get_charge() * 
-                    species_vec_[i].get_weight() * 
                     n_particles_[i];
             charge_total += c;
             max_charge = std::max(max_charge, std::abs(c));
