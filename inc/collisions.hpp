@@ -338,7 +338,7 @@ namespace PICsimulator {
                 continue;
             }
             
-            F_correction = N_coll_max/N_pair_tested;
+            F_correction = static_cast<double>(N_coll_max)/N_pair_tested;
             }
 
             for (unsigned int ind1 = 0; ind1<ms.n_species(); ++ind1) {
