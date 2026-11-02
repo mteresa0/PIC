@@ -339,6 +339,14 @@ namespace Domain{
                         3,
                         1,
                         periodicity_vector);
+
+        if constexpr (dim > 2) {
+            GridTools::collect_periodic_faces(dof_handler,
+                                        4,
+                                        5,
+                                        2,
+                                        periodicity_vector);
+        }
         
         DoFTools::make_periodicity_constraints<dim,dim>(periodicity_vector,constraints);
         return;
