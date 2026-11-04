@@ -28,9 +28,9 @@
             "total_pressure": 1e2,
             "n_components": 3,
             "components": [
-                { "species": "N2", "comp_part": 70 },
-                { "species": "N2+", "comp_part": 10 },
-                { "species": "O2-", "comp_part": 10 }
+                { "species": "N2", "comp_part": 700 },
+                { "species": "N2+", "comp_part": 100 },
+                { "species": "O2-", "comp_part": 150 }
             ]
         }
     ]

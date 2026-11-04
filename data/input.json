@@ -1,7 +1,7 @@
 {
     "dim":2,
-    "dt":1e-13,
-    "n_timesteps": 10,
+    "dt":5e-12,
+    "n_timesteps": 100,
     "lower_vertex": [
         0,
         0
