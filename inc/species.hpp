@@ -76,18 +76,21 @@ namespace PICsimulator::Species {
         }
 
         /// @brief get scale parameter of the Maxwell distribution
+        /// @details a = sqrt(k_B T / m), with m the real mass
         double get_a() const {
-            return BOLTZMANN_K * temperature / real_mass;
+            return std::sqrt(BOLTZMANN_K * temperature / real_mass);
         }
 
-        /// @brief get std of the Maxwell distribution
+        /// @brief get std of the Maxwell distribution (velocity)
+        /// @details std = a * sqrt(3 - 8/pi)
         double get_std() const {
-            return (std::sqrt(3-8/M_PI))*scale_parameter;
+            return (std::sqrt(3-8/M_PI))*get_a();
         }
 
-        /// @brief get mean velocity of the Maxwell distribution
+        /// @brief get mean of the Maxwell distribution (velocity)
+        /// @details mean = 2a * sqrt(2/pi) = a * sqrt(8/pi)
         double get_mean_velocity() const {
-            return 2 * scale_parameter / std::sqrt(2.0 / M_PI);
+            return 2 * get_a() * std::sqrt(2.0 / M_PI);
         }
         
         /// @brief get free path length
@@ -118,9 +121,6 @@ namespace PICsimulator::Species {
         // const double pressure; // Pa
         unsigned int weight;
         double computed_mass; // kg
-        /// @brief scale parameter of the Boltzmann-Maxwell distribution
-        /// @details usually denoted as 'a'
-        double scale_parameter;
     };
 
     // TODO: add constructor from json file
@@ -259,8 +259,7 @@ namespace PICsimulator::Species {
             diameter(c_diameter),
             temperature(c_temperature),
             weight(c_weight),
-            computed_mass(c_weight*c_real_mass),
-            scale_parameter(BOLTZMANN_K*temperature/ real_mass) 
+            computed_mass(c_weight*c_real_mass)
             {}
 
     inline ChemicalSpecies::ChemicalSpecies(
@@ -285,7 +284,6 @@ namespace PICsimulator::Species {
                 temperature = s["temperature"];
                 weight = s["weight"];
                 computed_mass = weight*real_mass;
-                scale_parameter = BOLTZMANN_K*temperature/ real_mass;
             };
         }
 
