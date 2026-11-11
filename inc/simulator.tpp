@@ -110,29 +110,33 @@ inline void PICsimulator::Simulator<dim>::run() {
                 {
                     // Point<dim> position(it->get_location());
                     velocity_type velocity(get_velocity_from_properties(it));
-
+                    // initialize |v|^2
+                    double v2 = velocity[0]*velocity[0]+velocity[1]*velocity[1];
                     // save velocity components
                     if constexpr (dim==2)
                         out_velocities.write_row(
                         {i*dt, it_ph, velocity[0], velocity[1]});
-                    else
+                    else {
                         out_velocities.write_row(
                         {i*dt, it_ph, velocity[0], velocity[1], velocity[2]});
-                    
+                        v2 += velocity[2]*velocity[2];
+                    }
                     // save kinetic energy per particle
-                    double ke = species[it_ph].get_mass() * velocity.norm();
+                    double ke = species[it_ph].get_mass() * v2;
                     sum_particles_kinetic_energy += ke;
                     sum_vels += velocity;
 
                 }
+                double sumvel2 = sum_vels[0]*sum_vels[0]+sum_vels[1]*sum_vels[1];
+                if constexpr (dim>2)
+                    sumvel2+= sum_vels[2]*sum_vels[2];
                 total_kinetic_energy = ph.n_global_particles() * 
-                    species[it_ph].get_mass() * sum_vels.norm();
+                    species[it_ph].get_mass() * sumvel2;
                 ++it_ph;
             }
         }
-        out_kinetic_energy.write_row({i*dt, total_kinetic_energy, sum_particles_kinetic_energy});
-
-
+        out_kinetic_energy.write_row(
+            {i*dt, total_kinetic_energy, sum_particles_kinetic_energy});
 
         // print data to files
         print_data_to_files(i);
@@ -290,26 +294,26 @@ inline void PICsimulator::Simulator<dim>::initialize()
     insert_particles_dummy();
 
     {
-    // compute and store data for grid and particles
-    auto n_cells = triangulation.n_active_cells();
-    double volume_domain, sum_d, mean_d_cell, mean_cell_volume, cell_volume_;
+        // compute grid and particles data for printing
+        auto n_cells = triangulation.n_active_cells();
+        double volume_domain = 0., sum_d = 0., cell_volume_ = 0.;
 
-    for(auto & cell: dof_handler.active_cell_iterators()){
-        cell_volume_ = cell->measure();
-        volume_domain += cell_volume_;
-        sum_d += cell->diameter();
-    }
+        for(auto & cell: dof_handler.active_cell_iterators()){
+            cell_volume_ = cell->measure();
+            volume_domain += cell_volume_;
+            sum_d += cell->diameter();
+        }
 
-    mean_d_cell = sum_d/n_cells;
-    mean_cell_volume = volume_domain/n_cells;
+        const double mean_d_cell = sum_d/n_cells;
+        const double mean_cell_volume = volume_domain/n_cells;
 
-    // printing data
-    LOGVAR("Number of cells", n_cells);
-    LOGVAR("Mean diameter of cells", mean_d_cell);
-    LOGVAR("Mean cell volume", mean_cell_volume);
-    LOGVAR("Domain volume", volume_domain);
-    LOGVAR("Timestep", dt);
-    LOGVAR("Number of timesteps", T/dt);
+        // printing data
+        LOGVAR("Number of cells", n_cells);
+        LOGVAR("Mean diameter of cells", mean_d_cell);
+        LOGVAR("Mean cell volume", mean_cell_volume);
+        LOGVAR("Domain volume", volume_domain);
+        LOGVAR("Timestep length", dt);
+        LOGVAR("Number of timesteps", T/dt);
     }
 
     // initialize collisions
