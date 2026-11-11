@@ -362,6 +362,7 @@ namespace PICsimulator{
         SolverControl            solver_control(1000, 1e-6 * system_rhs.l2_norm());
         SolverCG<Vector<double>> solver(solver_control);
         solver.solve(system_matrix, solution, system_rhs, PreconditionIdentity());
+        constraints.distribute(solution);
     } // end solve_potential
 
     template <int dim>
